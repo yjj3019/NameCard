@@ -155,10 +155,6 @@
   .card-btn-del  { background: rgba(224,85,85,.1); color: var(--danger); }
   .card-btn-del:hover  { background: rgba(224,85,85,.25); }
 
-  .card:nth-child(1){animation-delay:.04s} .card:nth-child(2){animation-delay:.08s}
-  .card:nth-child(3){animation-delay:.12s} .card:nth-child(4){animation-delay:.16s}
-  .card:nth-child(5){animation-delay:.20s} .card:nth-child(n+6){animation-delay:.24s}
-
   /* ── Modal ── */
   .modal-bg {
     display: none; position: fixed; inset: 0; z-index: 200;
@@ -383,6 +379,9 @@
 </div>
 
 <script>
+// ── 서버에서 전달받은 Canonical URL ──
+const SCRIPT_URL = "<?= scriptUrl ?>";
+
 // ── iframe 전용 알림 인터페이스 정의 ───────────────────────
 function showConfirm(msg, onOk) {
   const modal = document.getElementById('customConfirmModal');
@@ -424,14 +423,12 @@ google.script.run
   .getCurrentUser();
 
 function goAdmin() {
-  var url = window.location.href.split('?')[0] + '?page=admin';
-  window.location.href = url;
+  window.location.href = SCRIPT_URL + '?page=admin';
 }
 
 function switchToMobile() {
-  localStorage.setItem("cv_manual_view", "mobile"); // 세션 로컬 스토리지에 기기 수동 고정
-  var url = window.location.href.split('?')[0] + '?v=mobile';
-  window.location.href = url;
+  localStorage.setItem("cv_manual_view", "mobile"); // 로컬 스토리지 상태 저장
+  window.location.href = SCRIPT_URL + '?v=mobile';
 }
 
 let ALL_CARDS = [], currentFilter = 'all', lastUpdated = '', pollTimer = null;
