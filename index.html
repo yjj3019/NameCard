@@ -109,7 +109,7 @@
   .main { flex: 1; padding: 28px; overflow: hidden; }
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
   .section-title { font-family: 'DM Serif Display', serif; font-size: 24px; }
-  .section-sub { font-size: 13px; color: var(--muted); }
+  .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
 
   /* ── Grid ── */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
@@ -134,6 +134,37 @@
     content: ''; width: 48px; height: 48px; border: 1px solid rgba(201,168,76,.2); border-radius: 50%;
     background: url("data:image/svg+xml,%3Csvg xmlns='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)' viewBox='0 0 24 24' fill='none' stroke='%23c9a84c' stroke-width='1.2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center/26px no-repeat; opacity: .3;
   }
+
+  /* Default Image Styles (Desktop) */
+  .card-banner-default {
+    width: 100%; height: 144px; position: relative; overflow: hidden; flex-shrink: 0;
+    background: linear-gradient(135deg, #0f0f16 0%, #1a1520 40%, #0f1318 100%);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-banner-default::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 15% 50%, rgba(212,168,67,.06) 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 85% 50%, rgba(212,168,67,.04) 0%, transparent 70%);
+  }
+  .card-banner-default::after {
+    content: ''; position: absolute; left: 16px; right: 16px; top: 50%; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(212,168,67,.2), rgba(212,168,67,.4), rgba(212,168,67,.2), transparent);
+  }
+  .default-inner { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; padding: 0 20px; width: 100%; }
+  .default-monogram {
+    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; background: rgba(212,168,67,.08);
+    border: 1px solid rgba(212,168,67,.2); display: flex; align-items: center; justify-content: center;
+  }
+  .default-monogram svg { opacity: .5; }
+  .default-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .default-line { height: 5px; border-radius: 3px; background: rgba(212,168,67,.1); }
+  .default-line:nth-child(1) { width: 65%; }
+  .default-line:nth-child(2) { width: 45%; }
+  .default-line:nth-child(3) { width: 55%; height: 3px; background: rgba(212,168,67,.06); }
+  .default-corner { position: absolute; width: 12px; height: 12px; border-color: rgba(212,168,67,.2); border-style: solid; }
+  .default-corner.tl { top: 10px; left: 10px; border-width: 1px 0 0 1px; border-radius: 2px 0 0 0; }
+  .default-corner.tr { top: 10px; right: 10px; border-width: 1px 1px 0 0; border-radius: 0 2px 0 0; }
+  .default-corner.bl { bottom: 10px; left: 10px; border-width: 0 0 1px 1px; border-radius: 0 0 0 2px; }
+  .default-corner.br { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; border-radius: 0 0 2px 0; }
 
   .card-body { padding: 14px 16px 16px; }
   .card-name { font-family: 'DM Serif Display', serif; font-size: 18px; letter-spacing: -.2px; margin-bottom: 3px; }
@@ -288,7 +319,7 @@
     <button class="sidebar-cam" onclick="openUpload()">📷 명함 촬영 · 추가</button>
     
     <button class="nav-item" id="adminMenu" onclick="goAdmin()" style="display:none; color:var(--gold);">
-      <span class="ni">👥</span> 사용자 관리
+      <span class="ni">👥</span> 시스템 설정
     </button>
     <button class="nav-item" onclick="switchToMobile()" style="margin-top:8px;">
       <span class="ni">📱</span> 모바일 버전
@@ -395,6 +426,13 @@ function navigateTo(url) {
   }
 }
 
+// ── 이미지 유효성 검증 함수 ──
+function hasValidImage(url) {
+  if (!url) return false;
+  const u = String(url).trim().toLowerCase();
+  return u !== '' && u !== 'null' && u !== 'undefined' && u !== 'none';
+}
+
 // ── iframe 전용 알림 인터페이스 정의 ───────────────────────
 function showConfirm(msg, onOk) {
   const modal = document.getElementById('customConfirmModal');
@@ -440,13 +478,19 @@ function goAdmin() {
 }
 
 function switchToMobile() {
-  try { localStorage.setItem("cv_manual_view", "mobile"); } catch(e){}
+  try { 
+    localStorage.setItem("cv_manual_view", "mobile"); 
+    localStorage.setItem("cv_last_view", "mobile");
+  } catch(e){}
   navigateTo(SCRIPT_URL + '?v=mobile');
 }
 
 let ALL_CARDS = [], currentFilter = 'all', lastUpdated = '', pollTimer = null;
 
 window.addEventListener('load', () => {
+  try {
+    localStorage.setItem("cv_last_view", "desktop"); // [해결] 데스크탑 모드에서 "desktop" 상태 주입
+  } catch(e) {}
   loadCards();
   startPolling();
 });
@@ -500,11 +544,39 @@ function renderGrid(cards) {
   app.innerHTML = `<div class="grid">${cards.map(cardHTML).join('')}</div>`;
 }
 
+// 기본 플레이스홀더 배너 HTML 반환 (Desktop 용)
+function makeDefaultBannerHTML() {
+  return `
+    <div class="card-banner-default">
+      <div class="default-corner tl"></div>
+      <div class="default-corner tr"></div>
+      <div class="default-corner bl"></div>
+      <div class="default-corner br"></div>
+      <div class="default-inner">
+        <div class="default-monogram">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="default-lines">
+          <div class="default-line"></div>
+          <div class="default-line"></div>
+          <div class="default-line"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function cardHTML(c) {
-  const imgTag = c.imageUrl ? `<img src="${c.imageUrl}" onerror="this.parentElement.classList.add('no-img')">` : '';
+  const hasImg = hasValidImage(c.imageUrl);
+  const imgTag = hasImg ? `<img src="${c.imageUrl}" onerror="this.parentElement.innerHTML=makeDefaultBannerHTML()">` : '';
+  const mediaContainer = hasImg ? `<div class="card-img">${imgTag}</div>` : makeDefaultBannerHTML();
+
   return `
   <div class="card" onclick="openDetail(${c.index})">
-    <div class="card-img ${!c.imageUrl?'no-img':''}">${imgTag}</div>
+    ${mediaContainer}
     <div class="card-menu">
       <button class="card-btn card-btn-edit" onclick="event.stopPropagation();openEdit(${c.index})">✏️</button>
       <button class="card-btn card-btn-del"  onclick="event.stopPropagation();delCard(${c.index},'${escHtml(c.name)}')">🗑️</button>
@@ -543,13 +615,16 @@ document.getElementById('searchInput').addEventListener('input', function() { fi
 
 function openDetail(idx) {
   const c = ALL_CARDS.find(x => x.index === idx); if (!c) return;
-  const imgTag = c.imageUrl ? `<img src="${c.imageUrl}" onerror="this.parentElement.classList.add('no-img-lg')">` : '';
+  const hasImg = hasValidImage(c.imageUrl);
+  const imgTag = hasImg ? `<img src="${c.imageUrl}" onerror="this.parentElement.innerHTML=makeDefaultBannerHTML()">` : '';
+  const mediaContainer = hasImg ? `<div class="detail-img">${imgTag}</div>` : makeDefaultBannerHTML();
+
   document.getElementById('detailContent').innerHTML = `
     <div class="modal-header">
       <span class="modal-title">${escHtml(c.name||'명함 상세')}</span>
       <button class="modal-close" onclick="closeModal('detailModal')">×</button>
     </div>
-    <div class="detail-img ${!c.imageUrl?'no-img-lg':''}">${imgTag}</div>
+    ${mediaContainer}
     <div class="detail-body">
       <div class="detail-name">${escHtml(c.name||'이름 없음')}</div>
       <div class="detail-company">${escHtml(c.company||'')}</div>
