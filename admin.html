@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>사용자 관리 — CardVault Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0c; --surface:#111116; --card:#17171e;
+    --border:rgba(255,255,255,.07); --gold:#c9a84c;
+    --gold-dim:rgba(201,168,76,.12); --text:#f0ede8;
+    --muted:#5e5b55; --sub:#9e9a92; --danger:#e05555;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+  header{
+    position:sticky;top:0;z-index:100;
+    background:rgba(10,10,12,.95);backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    padding:0 32px;display:flex;align-items:center;gap:16px;height:64px;
+  }
+  .logo{font-family:'DM Serif Display',serif;font-size:20px;background:linear-gradient(135deg,#f0ede8,#c9a84c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  .logo-badge{font-size:9px;color:var(--gold);letter-spacing:2px;border:1px solid rgba(201,168,76,.3);border-radius:4px;padding:2px 6px;}
+  .page-tag{font-size:12px;color:var(--muted);border-left:1px solid var(--border);padding-left:16px;}
+  .back-btn{margin-left:auto;font-size:13px;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;}
+
+  .main{max-width:800px;margin:0 auto;padding:36px 24px;}
+
+  .section-title{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:6px;}
+  .section-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
+
+  /* 추가 폼 */
+  .add-form{
+    background:var(--surface);border:1px solid var(--border);
+    border-radius:16px;padding:24px;margin-bottom:24px;
+  }
+  .form-title{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--sub);letter-spacing:.5px;text-transform:uppercase;}
+  .form-row{display:flex;gap:10px;flex-wrap:wrap;}
+  .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;}
+  .field label{font-size:10px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
+  .field input, .field select{
+    background:rgba(255,255,255,.03);border:1px solid var(--border);
+    border-radius:8px;padding:10px 12px;color:var(--text);
+    font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;
+  }
+  .field input:focus,.field select:focus{border-color:rgba(201,168,76,.5);}
+  .field select option{background:#17171e;}
+  .btn-add{
+    padding:10px 22px;background:linear-gradient(135deg,#c9a84c,#9a7530);
+    border:none;border-radius:8px;color:#0a0a0c;font-size:13px;
+    font-weight:700;cursor:pointer;font-family:inherit;
+    align-self:flex-end;white-space:nowrap;
+    transition:opacity .15s;
+  }
+  .btn-add:hover{opacity:.88;}
+
+  /* 사용자 테이블 */
+  .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+  .table-header{
+    display:grid;grid-template-columns:1fr .6fr .4fr .5fr .3fr;
+    padding:12px 20px;border-bottom:1px solid var(--border);
+    font-size:10px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;
+  }
+  .user-row{
+    display:grid;grid-template-columns:1fr .6fr .4fr .5fr .3fr;
+    padding:14px 20px;border-bottom:1px solid var(--border);
+    align-items:center;transition:background .15s;
+  }
+  .user-row:last-child{border-bottom:none;}
+  .user-row:hover{background:rgba(255,255,255,.02);}
+
+  .user-email{font-size:13px;font-weight:500;}
+  .user-name{font-size:13px;color:var(--sub);}
+  .role-badge{
+    display:inline-flex;align-items:center;
+    padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;
+    width:fit-content;
+  }
+  .role-admin{background:rgba(201,168,76,.15);color:var(--gold);border:1px solid rgba(201,168,76,.3);}
+  .role-user {background:rgba(255,255,255,.06);color:var(--sub);border:1px solid var(--border);}
+  .user-date{font-size:11px;color:var(--muted);}
+
+  .row-actions{display:flex;gap:6px;}
+  .btn-role{
+    padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;
+    font-family:inherit;border:1px solid var(--border);
+    background:rgba(255,255,255,.04);color:var(--sub);transition:all .15s;
+  }
+  .btn-role:hover{border-color:rgba(201,168,76,.4);color:var(--gold);}
+  .btn-del{
+    padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;
+    font-family:inherit;border:1px solid rgba(224,85,85,.2);
+    background:rgba(224,85,85,.08);color:var(--danger);transition:all .15s;
+  }
+  .btn-del:hover{background:rgba(224,85,85,.2);}
+
+  .empty-users{padding:48px;text-align:center;color:var(--muted);font-size:14px;}
+
+  /* 토스트 */
+  .toast{
+    position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+    background:#1c1c25;border:1px solid var(--border);
+    border-radius:10px;padding:12px 20px;font-size:13px;
+    display:none;z-index:999;white-space:nowrap;
+    box-shadow:0 8px 32px rgba(0,0,0,.5);
+  }
+  .toast.show{display:block;animation:toastIn .25s ease;}
+  .toast.ok{border-color:rgba(74,222,128,.3);color:#4ade80;}
+  .toast.err{border-color:rgba(224,85,85,.3);color:var(--danger);}
+  @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  .loading-wrap{display:flex;align-items:center;justify-content:center;padding:48px;gap:12px;color:var(--muted);}
+  .spinner{width:20px;height:20px;border:2px solid rgba(201,168,76,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  @media(max-width:600px){
+    header{padding:0 16px;}
+    .main{padding:24px 16px;}
+    .table-header,.user-row{grid-template-columns:1fr .5fr .4fr;}
+    .table-header > *:nth-child(4),
+    .table-header > *:nth-child(5),
+    .user-row > *:nth-child(4){display:none;}
+    .row-actions{flex-direction:column;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="logo">CardVault</span>
+  <span class="logo-badge">PRO</span>
+  <span class="page-tag">사용자 관리</span>
+  <button class="back-btn" onclick="goBack()">← 명함 목록으로</button>
+</header>
+
+<div class="main">
+  <div class="section-title">사용자 관리</div>
+  <div class="section-sub">Google OAuth 인증 기반으로 접근을 허용할 이메일을 관리합니다</div>
+
+  <!-- 추가 폼 -->
+  <div class="add-form">
+    <div class="form-title">새 사용자 추가</div>
+    <div class="form-row">
+      <div class="field">
+        <label>이메일</label>
+        <input type="email" id="newEmail" placeholder="example@gmail.com">
+      </div>
+      <div class="field" style="max-width:180px">
+        <label>이름 (선택)</label>
+        <input type="text" id="newName" placeholder="홍길동">
+      </div>
+      <div class="field" style="max-width:140px">
+        <label>역할</label>
+        <select id="newRole">
+          <option value="user">일반 사용자</option>
+          <option value="admin">관리자</option>
+        </select>
+      </div>
+      <button class="btn-add" onclick="addUser()">+ 추가</button>
+    </div>
+  </div>
+
+  <!-- 사용자 목록 -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <span>이메일</span>
+      <span>이름</span>
+      <span>역할</span>
+      <span>등록일</span>
+      <span></span>
+    </div>
+    <div id="userList">
+      <div class="loading-wrap"><div class="spinner"></div><span>불러오는 중</span></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let USERS = [];
+
+window.addEventListener('load', loadUsers);
+
+function loadUsers() {
+  google.script.run
+    .withSuccessHandler(renderUsers)
+    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+    .getUsers();
+}
+
+function renderUsers(users) {
+  USERS = users;
+  const el = document.getElementById('userList');
+  if (!users.length) {
+    el.innerHTML = '<div class="empty-users">등록된 사용자가 없습니다</div>';
+    return;
+  }
+  el.innerHTML = users.map(u => `
+    <div class="user-row">
+      <div class="user-email">${escHtml(u.email)}</div>
+      <div class="user-name">${escHtml(u.name || '-')}</div>
+      <div>
+        <span class="role-badge ${u.role === 'admin' ? 'role-admin' : 'role-user'}">
+          ${u.role === 'admin' ? '관리자' : '일반'}
+        </span>
+      </div>
+      <div class="user-date">${formatDate(u.createdAt)}</div>
+      <div class="row-actions">
+        <button class="btn-role" onclick="toggleRole(${u.index},'${u.role}')">
+          ${u.role === 'admin' ? '→ 일반' : '→ 관리자'}
+        </button>
+        <button class="btn-del" onclick="removeUser(${u.index},'${escHtml(u.email)}')">삭제</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addUser() {
+  const email = document.getElementById('newEmail').value.trim();
+  const name  = document.getElementById('newName').value.trim();
+  const role  = document.getElementById('newRole').value;
+
+  if (!email || !email.includes('@')) {
+    showToast('❌ 유효한 이메일을 입력하세요', 'err'); return;
+  }
+
+  google.script.run
+    .withSuccessHandler(() => {
+      showToast('✅ 사용자가 추가되었습니다', 'ok');
+      document.getElementById('newEmail').value = '';
+      document.getElementById('newName').value = '';
+      loadUsers();
+    })
+    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+    .addUser(email, name, role);
+}
+
+function toggleRole(rowIndex, currentRole) {
+  const newRole = currentRole === 'admin' ? 'user' : 'admin';
+  if (!confirm(`역할을 "${newRole === 'admin' ? '관리자' : '일반 사용자'}"로 변경할까요?`)) return;
+  google.script.run
+    .withSuccessHandler(() => { showToast('✅ 역할이 변경되었습니다', 'ok'); loadUsers(); })
+    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+    .updateUserRole(rowIndex, newRole);
+}
+
+function removeUser(rowIndex, email) {
+  if (!confirm(`"${email}" 사용자를 삭제할까요?`)) return;
+  google.script.run
+    .withSuccessHandler(() => { showToast('✅ 삭제되었습니다', 'ok'); loadUsers(); })
+    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+    .removeUser(rowIndex);
+}
+
+function goBack() {
+  const url = window.location.href.split('?')[0] + '?mobile=0';
+  window.location.href = url;
+}
+
+function formatDate(ts) {
+  if (!ts) return '-';
+  try { return new Date(ts).toLocaleDateString('ko-KR'); } catch { return ts; }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
