@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CardVault Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #0a0a0c;
+    --surface:  #111116;
+    --card:     #17171e;
+    --card2:    #1c1c25;
+    --border:   rgba(255,255,255,.07);
+    --gold:     #c9a84c;
+    --gold-dim: rgba(201,168,76,.12);
+    --gold-glow:rgba(201,168,76,.2);
+    --text:     #f0ede8;
+    --muted:    #5e5b55;
+    --sub:      #9e9a92;
+    --danger:   #e05555;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; overflow-x: hidden;
+  }
+
+  /* 배경 광원 */
+  body::before {
+    content: '';
+    position: fixed; top: -300px; left: -200px;
+    width: 800px; height: 800px;
+    background: radial-gradient(circle, rgba(201,168,76,.03) 0%, transparent 65%);
+    pointer-events: none; z-index: 0;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,12,.92);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--border);
+    padding: 0 32px;
+    display: flex; align-items: center; gap: 20px; height: 64px;
+  }
+
+  .logo {
+    display: flex; align-items: baseline; gap: 8px; flex-shrink: 0;
+  }
+  .logo-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    background: linear-gradient(135deg, #f0ede8 30%, var(--gold));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .logo-badge {
+    font-size: 9px; color: var(--gold); letter-spacing: 2px;
+    text-transform: uppercase; font-weight: 600;
+    border: 1px solid rgba(201,168,76,.3); border-radius: 4px;
+    padding: 2px 6px;
+  }
+
+  .search-wrap { flex: 1; max-width: 420px; position: relative; }
+  .search-wrap input {
+    width: 100%;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 16px 10px 42px;
+    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
+    transition: border-color .25s, background .25s;
+  }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-wrap input:focus {
+    border-color: rgba(201,168,76,.4); background: rgba(201,168,76,.04);
+  }
+  .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+
+  .header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+  .stat { font-size: 13px; color: var(--muted); }
+  .stat b { color: var(--gold); }
+
+  /* 자동갱신 상태 */
+  .sync-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--gold); opacity: .5;
+    transition: opacity .3s;
+  }
+  .sync-dot.active { opacity: 1; animation: pulse 1s ease infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
+
+  /* ── Layout ── */
+  .layout { display: flex; min-height: calc(100vh - 64px); position: relative; z-index: 1; }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px; flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    position: sticky; top: 64px; height: calc(100vh - 64px);
+    overflow-y: auto;
+  }
+  .sidebar-section { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px 8px; margin-top: 8px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--muted); border: none; background: transparent;
+    width: 100%; font-family: inherit; text-align: left;
+    transition: background .15s, color .15s;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.04); color: var(--sub); }
+  .nav-item.active { background: var(--gold-dim); color: var(--gold); }
+  .nav-item .ni { font-size: 16px; }
+
+  .sidebar-cam {
+    margin-top: auto;
+    background: linear-gradient(135deg, #c9a84c, #9a7530);
+    color: #0a0a0c; border: none; border-radius: 12px;
+    padding: 13px 16px; font-size: 13px; font-weight: 700;
+    cursor: pointer; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    letter-spacing: .3px; transition: opacity .15s;
+  }
+  .sidebar-cam:hover { opacity: .88; }
+
+  /* ── Main ── */
+  .main { flex: 1; padding: 28px; overflow: hidden; }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+  }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 24px; }
+  .section-sub { font-size: 13px; color: var(--muted); }
+
+  /* ── Grid ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+  }
+
+  /* ── Card ── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden; cursor: pointer;
+    position: relative;
+    transition: transform .2s, box-shadow .2s, border-color .2s;
+    animation: cardIn .4s ease both;
+  }
+  .card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(160deg, rgba(201,168,76,.02) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  @keyframes cardIn {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 48px rgba(0,0,0,.4), 0 0 0 1px rgba(201,168,76,.15);
+    border-color: rgba(201,168,76,.2);
+  }
+
+  .card-img {
+    width: 100%; height: 144px;
+    background: linear-gradient(160deg, #1c1c26, #141418);
+    display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .card-img::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px;
+    background: linear-gradient(transparent, rgba(10,10,12,.6));
+  }
+  .card-img.no-img::before {
+    content: '';
+    width: 48px; height: 48px;
+    border: 1px solid rgba(201,168,76,.2); border-radius: 50%;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c9a84c' stroke-width='1.2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center/26px no-repeat;
+    opacity: .3;
+  }
+
+  .card-body { padding: 14px 16px 16px; }
+  .card-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px; letter-spacing: -.2px; margin-bottom: 3px;
+  }
+  .card-company { font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
+  .card-title   { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
+  .card-contacts { display: flex; flex-direction: column; gap: 4px; }
+  .card-contact {
+    font-size: 11px; color: var(--sub); text-decoration: none;
+    display: flex; align-items: center; gap: 6px; transition: color .15s;
+  }
+  .card-contact:hover { color: var(--text); }
+
+  .card-menu {
+    position: absolute; top: 10px; right: 10px;
+    display: flex; gap: 6px; opacity: 0; transition: opacity .2s;
+  }
+  .card:hover .card-menu { opacity: 1; }
+  .card-btn {
+    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
+    cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px); transition: all .15s;
+  }
+  .card-btn-edit { background: rgba(201,168,76,.12); color: var(--gold); }
+  .card-btn-edit:hover { background: rgba(201,168,76,.25); }
+  .card-btn-del  { background: rgba(224,85,85,.1); color: var(--danger); }
+  .card-btn-del:hover  { background: rgba(224,85,85,.25); }
+
+  /* stagger */
+  .card:nth-child(1){animation-delay:.04s} .card:nth-child(2){animation-delay:.08s}
+  .card:nth-child(3){animation-delay:.12s} .card:nth-child(4){animation-delay:.16s}
+  .card:nth-child(5){animation-delay:.20s} .card:nth-child(n+6){animation-delay:.24s}
+
+  /* ── Modal ── */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 24px; width: 100%; max-width: 500px;
+    max-height: 88vh; overflow-y: auto;
+    animation: modalIn .25s cubic-bezier(.32,.72,0,1);
+  }
+  @keyframes modalIn { from{opacity:0;transform:scale(.96)translateY(8px)} to{opacity:1;transform:none} }
+
+  .modal-header { padding: 24px 26px 0; display: flex; justify-content: space-between; align-items: center; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; }
+  .modal-close {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.06); border: 1px solid var(--border);
+    color: var(--muted); cursor: pointer; font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,.12); }
+
+  .detail-img {
+    width: calc(100% - 52px); margin: 18px 26px 0;
+    border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
+    height: 180px; background: linear-gradient(160deg,#1c1c26,#141418);
+    display: flex; align-items: center; justify-content: center; position: relative;
+  }
+  .detail-img img { width: 100%; height: 100%; object-fit: cover; }
+  .detail-img.no-img-lg::before {
+    content: '🪪'; font-size: 56px; opacity: .2;
+  }
+
+  .detail-body { padding: 20px 26px 28px; }
+  .detail-name {
+    font-family: 'DM Serif Display', serif; font-size: 30px; letter-spacing: -.3px; margin-bottom: 5px;
+    background: linear-gradient(135deg, #f0ede8, #c9b99a);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .detail-company { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
+  .detail-title   { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
+
+  .contact-list { display: flex; flex-direction: column; gap: 10px; }
+  .contact-item {
+    display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+    background: rgba(255,255,255,.03); border: 1px solid var(--border);
+    border-radius: 12px; text-decoration: none; color: var(--text);
+    transition: border-color .2s, background .2s;
+  }
+  .contact-item:hover { border-color: rgba(201,168,76,.3); background: var(--gold-dim); }
+  .contact-icon {
+    width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .contact-icon.ph { background: rgba(74,222,128,.1); }
+  .contact-icon.mb { background: rgba(139,92,246,.1); }
+  .contact-icon.em { background: rgba(96,165,250,.1); }
+  .contact-icon.ad { background: rgba(251,191,36,.1); }
+  .contact-label { font-size: 10px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+  .contact-value { font-size: 14px; font-weight: 500; }
+
+  /* Edit */
+  .edit-body { padding: 20px 26px 28px; display: flex; flex-direction: column; gap: 14px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
+  .field-input {
+    width: 100%; background: rgba(255,255,255,.03); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 14px;
+    font-family: inherit; outline: none; transition: border-color .2s;
+  }
+  .field-input:focus { border-color: rgba(201,168,76,.5); }
+  .form-actions { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-gold {
+    flex: 1; padding: 13px;
+    background: linear-gradient(135deg, #c9a84c, #9a7530);
+    border: none; border-radius: 10px; color: #0a0a0c;
+    font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn-ghost {
+    flex: 1; padding: 13px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer; font-family: inherit;
+  }
+
+  /* Camera Modal */
+  .upload-modal .modal { max-width: 440px; }
+  .cam-area { margin: 18px 26px 0; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 4/3; position: relative; }
+  #camVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #camCanvas { display: none; }
+  .cam-guide {
+    position: absolute; inset: 14px; border: 1px solid rgba(201,168,76,.4);
+    border-radius: 10px; pointer-events: none;
+  }
+  .cam-guide::before,.cam-guide::after { content:''; position:absolute; width:18px; height:18px; border-color:var(--gold); border-style:solid; }
+  .cam-guide::before { top:-1px;left:-1px;border-width:2px 0 0 2px;border-radius:3px 0 0 0; }
+  .cam-guide::after  { bottom:-1px;right:-1px;border-width:0 2px 2px 0;border-radius:0 0 3px 0; }
+
+  .preview-area { width: calc(100% - 52px); margin: 18px 26px 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
+  .preview-area img { width: 100%; display: block; }
+
+  .cam-perm { margin: 18px 26px 0; padding: 24px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 14px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 14px; }
+  .perm-icon { font-size: 44px; }
+  .perm-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .perm-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .perm-guide { text-align: left; font-size: 12px; color: var(--sub); background: rgba(255,255,255,.03); border-radius: 10px; padding: 14px 16px; width: 100%; line-height: 2; }
+
+  .cam-actions { padding: 16px 26px 26px; display: flex; flex-direction: column; gap: 10px; }
+  .cam-row { display: flex; gap: 10px; }
+  .progress-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; margin: 0 26px 8px; }
+  .progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--gold), #e8c86a); border-radius: 2px; transition: width .4s ease; }
+  .upload-msg { text-align: center; font-size: 12px; color: var(--muted); padding: 0 26px 6px; min-height: 18px; }
+  .gallery-link { text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; display: block; }
+  .gallery-link span { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Empty / Loading */
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 24px; text-align: center; gap: 16px; }
+  .empty-icon-wrap { width: 88px; height: 88px; border-radius: 24px; background: rgba(201,168,76,.05); border: 1px solid rgba(201,168,76,.12); display: flex; align-items: center; justify-content: center; font-size: 40px; }
+  .empty-title { font-family: 'DM Serif Display', serif; font-size: 26px; }
+  .empty-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+  .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; }
+  .loading-ring { width: 36px; height: 36px; border: 2px solid rgba(201,168,76,.15); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+  .loading-text { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-text">CardVault</span>
+    <span class="logo-badge">PRO</span>
+  </div>
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="이름, 회사, 번호 검색...">
+  </div>
+  <div class="header-right">
+    <div class="sync-dot" id="syncDot" title="자동 갱신 활성"></div>
+    <div class="stat">총 <b id="totalCount">-</b>장</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">메뉴</div>
+    <button class="nav-item active" onclick="filterCards('all',this)"><span class="ni">🪪</span> 전체 명함</button>
+    <button class="nav-item" onclick="filterCards('recent',this)"><span class="ni">🕐</span> 최근 7일</button>
+    <button class="sidebar-cam" onclick="openUpload()">📷 명함 촬영 · 추가</button>
+    <!-- 관리자 메뉴 (admin만 표시) -->
+    <button class="nav-item" id="adminMenu"
+      onclick="goAdmin()"
+      style="display:none; color:var(--gold);">
+      <span class="ni">👥</span> 사용자 관리
+    </button>
+    <!-- 모바일로 전환 -->
+    <button class="nav-item" onclick="switchToMobile()" style="margin-top:8px;">
+      <span class="ni">📱</span> 모바일 버전
+    </button> 
+  </aside>
+
+  <div class="main">
+    <div class="section-header">
+      <div>
+        <div class="section-title" id="sectionTitle">전체 명함</div>
+        <div class="section-sub" id="sectionSub">로딩 중...</div>
+      </div>
+    </div>
+    <div id="app">
+      <div class="loading-wrap"><div class="loading-ring"></div><div class="loading-text">불러오는 중</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-bg" id="detailModal">
+  <div class="modal"><div id="detailContent"></div></div>
+</div>
+
+<!-- 수정 모달 -->
+<div class="modal-bg" id="editModal">
+  <div class="modal"><div id="editContent"></div></div>
+</div>
+
+<!-- 업로드 모달 -->
+<div class="modal-bg upload-modal" id="uploadModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">명함 촬영</span>
+      <button class="modal-close" onclick="closeUpload()">×</button>
+    </div>
+    <div class="cam-area" id="camWrap">
+      <video id="camVideo" autoplay playsinline></video>
+      <canvas id="camCanvas"></canvas>
+      <div class="cam-guide"></div>
+    </div>
+    <div class="cam-perm" id="camPerm">
+      <div class="perm-icon">📷</div>
+      <div class="perm-title">카메라 권한 필요</div>
+      <div class="perm-desc">명함을 촬영하려면<br>카메라 접근을 허용해주세요</div>
+      <div class="perm-guide" id="permGuide"></div>
+      <button class="btn-gold" onclick="retryCamera()" style="width:100%">다시 시도</button>
+    </div>
+    <div class="preview-area" id="previewWrap" style="display:none"><img id="previewImg" src=""></div>
+    <div class="progress-track" id="progressTrack" style="display:none"><div class="progress-bar" id="progressBar"></div></div>
+    <div class="upload-msg" id="uploadMsg"></div>
+    <div class="cam-actions">
+      <div class="cam-row" id="actShoot">
+        <button class="btn-ghost" onclick="switchCamera()" style="flex:.5">🔄 전환</button>
+        <button class="btn-gold" onclick="shoot()">📸 촬영하기</button>
+      </div>
+      <div class="cam-row" id="actConfirm" style="display:none">
+        <button class="btn-ghost" onclick="retake()">🔄 다시 찍기</button>
+        <button class="btn-gold" onclick="uploadPhoto()">⬆ 업로드</button>
+      </div>
+      <label class="gallery-link">
+        또는 <span>갤러리에서 선택</span>
+        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadFromFile(this)">
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+// 관리자 메뉴 + 현재 사용자 확인
+google.script.run
+  .withSuccessHandler(function(user) {
+    if (user.role === 'admin') {
+      document.getElementById('adminMenu').style.display = 'flex';
+    }
+  })
+  .withFailureHandler(function(){})
+  .getCurrentUser();
+
+function goAdmin() {
+  var url = window.location.href.split('?')[0] + '?mobile=0&page=admin';
+  window.location.href = url;
+}
+
+function switchToMobile() {
+  var url = window.location.href.split('?')[0] + '?switch=mobile';
+  window.location.href = url;
+}
+
+let ALL_CARDS = [], currentFilter = 'all', lastUpdated = '', pollTimer = null;
+
+window.addEventListener('load', () => {
+  loadCards();
+  startPolling();
+});
+
+// ── 자동 갱신 (30초 폴링) ──────────────────────────────
+function startPolling() {
+  pollTimer = setInterval(() => {
+    google.script.run
+      .withSuccessHandler(ts => {
+        if (ts && ts !== lastUpdated) {
+          lastUpdated = ts;
+          flashSync();
+          loadCards();
+        }
+      }).getLastUpdated();
+  }, 30000);
+}
+
+function flashSync() {
+  const dot = document.getElementById('syncDot');
+  dot.classList.add('active');
+  setTimeout(() => dot.classList.remove('active'), 2000);
+}
+
+function loadCards() {
+  google.script.run.withSuccessHandler(render)
+    .withFailureHandler(err => {
+      document.getElementById('app').innerHTML =
+        `<div class="loading-wrap" style="color:#e05555">❌ ${err.message}</div>`;
+    }).getNamecards();
+}
+
+function render(cards) {
+  ALL_CARDS = cards;
+  lastUpdated = cards.length ? (cards[cards.length-1].createdAt || '') : lastUpdated;
+  document.getElementById('totalCount').textContent = cards.length;
+  filterCards(currentFilter, null);
+}
+
+function renderGrid(cards) {
+  const app = document.getElementById('app');
+  document.getElementById('sectionSub').textContent = `${cards.length}개의 명함`;
+  if (!cards.length) {
+    app.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon-wrap">🪪</div>
+        <div class="empty-title">명함이 없습니다</div>
+        <div class="empty-sub">📷 버튼을 눌러<br>첫 번째 명함을 추가하세요</div>
+      </div>`;
+    return;
+  }
+  app.innerHTML = `<div class="grid">${cards.map(cardHTML).join('')}</div>`;
+}
+
+function cardHTML(c) {
+  const imgTag = c.imageUrl ? `<img src="${c.imageUrl}" onerror="this.parentElement.classList.add('no-img')">` : '';
+  return `
+  <div class="card" onclick="openDetail(${c.index})">
+    <div class="card-img ${!c.imageUrl?'no-img':''}">${imgTag}</div>
+    <div class="card-menu">
+      <button class="card-btn card-btn-edit" onclick="event.stopPropagation();openEdit(${c.index})">✏️</button>
+      <button class="card-btn card-btn-del"  onclick="event.stopPropagation();delCard(${c.index},'${escHtml(c.name)}')">🗑️</button>
+    </div>
+    <div class="card-body">
+      <div class="card-name">${escHtml(c.name||'이름 없음')}</div>
+      <div class="card-company">${escHtml(c.company||'')}</div>
+      <div class="card-title">${escHtml(c.title||'')}</div>
+      <div class="card-contacts">
+        ${c.phone  ? `<a class="card-contact" href="tel:${c.phone}"  onclick="event.stopPropagation()">📞 ${escHtml(c.phone)}</a>`:''}
+        ${c.mobile ? `<a class="card-contact" href="tel:${c.mobile}" onclick="event.stopPropagation()">📱 ${escHtml(c.mobile)}</a>`:''}
+        ${c.email  ? `<a class="card-contact" href="mailto:${c.email}" onclick="event.stopPropagation()">✉️ ${escHtml(c.email)}</a>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+function filterCards(type, el) {
+  currentFilter = type;
+  let cards = ALL_CARDS;
+  if (type === 'recent') {
+    const cutoff = Date.now() - 7*24*60*60*1000;
+    cards = cards.filter(c => new Date(c.createdAt).getTime() > cutoff);
+  }
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  if (q) cards = cards.filter(c =>
+    [c.name,c.company,c.title,c.phone,c.mobile,c.email].some(v => v&&v.toLowerCase().includes(q))
+  );
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (el?.classList?.contains('nav-item')) el.classList.add('active');
+  document.getElementById('sectionTitle').textContent = type==='recent' ? '최근 7일' : '전체 명함';
+  renderGrid(cards);
+}
+
+document.getElementById('searchInput').addEventListener('input', function() { filterCards(currentFilter, null); });
+
+function openDetail(idx) {
+  const c = ALL_CARDS.find(x => x.index === idx); if (!c) return;
+  const imgTag = c.imageUrl ? `<img src="${c.imageUrl}" onerror="this.parentElement.classList.add('no-img-lg')">` : '';
+  document.getElementById('detailContent').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">${escHtml(c.name||'명함 상세')}</span>
+      <button class="modal-close" onclick="closeModal('detailModal')">×</button>
+    </div>
+    <div class="detail-img ${!c.imageUrl?'no-img-lg':''}">${imgTag}</div>
+    <div class="detail-body">
+      <div class="detail-name">${escHtml(c.name||'이름 없음')}</div>
+      <div class="detail-company">${escHtml(c.company||'')}</div>
+      <div class="detail-title">${escHtml(c.title||'')}</div>
+      <div class="contact-list">
+        ${c.phone   ? `<a class="contact-item" href="tel:${c.phone}"><div class="contact-icon ph">📞</div><div><div class="contact-label">전화</div><div class="contact-value">${escHtml(c.phone)}</div></div></a>`:``}
+        ${c.mobile  ? `<a class="contact-item" href="tel:${c.mobile}"><div class="contact-icon mb">📱</div><div><div class="contact-label">휴대폰</div><div class="contact-value">${escHtml(c.mobile)}</div></div></a>`:``}
+        ${c.email   ? `<a class="contact-item" href="mailto:${c.email}"><div class="contact-icon em">✉️</div><div><div class="contact-label">이메일</div><div class="contact-value">${escHtml(c.email)}</div></div></a>`:``}
+        ${c.address ? `<div class="contact-item"><div class="contact-icon ad">📍</div><div><div class="contact-label">주소</div><div class="contact-value">${escHtml(c.address)}</div></div></div>`:``}
+      </div>
+    </div>`;
+  openModal('detailModal');
+}
+
+function openEdit(idx) {
+  const c = ALL_CARDS.find(x => x.index === idx); if (!c) return;
+  document.getElementById('editContent').innerHTML = `
+    <div class="modal-header">
+      <span class="modal-title">명함 수정</span>
+      <button class="modal-close" onclick="closeModal('editModal')">×</button>
+    </div>
+    <div class="edit-body">
+      ${fld('company','회사명',c.company)}
+      ${fld('name','이름',c.name)}
+      ${fld('title','직책',c.title)}
+      ${fld('phone','전화번호',c.phone)}
+      ${fld('mobile','휴대폰',c.mobile)}
+      ${fld('email','이메일',c.email)}
+      ${fld('address','주소',c.address)}
+      <div class="form-actions">
+        <button class="btn-ghost" onclick="closeModal('editModal')">취소</button>
+        <button class="btn-gold" onclick="saveEdit(${idx})">저장</button>
+      </div>
+    </div>`;
+  openModal('editModal');
+}
+
+function fld(id, label, val) {
+  return `<div class="field-group"><label class="field-label">${label}</label><input class="field-input" id="f_${id}" type="text" value="${escHtml(val||'')}"></div>`;
+}
+
+function saveEdit(idx) {
+  const data = {
+    company: document.getElementById('f_company').value,
+    name:    document.getElementById('f_name').value,
+    title:   document.getElementById('f_title').value,
+    phone:   document.getElementById('f_phone').value,
+    mobile:  document.getElementById('f_mobile').value,
+    email:   document.getElementById('f_email').value,
+    address: document.getElementById('f_address').value,
+  };
+  google.script.run
+    .withSuccessHandler(() => { closeModal('editModal'); loadCards(); })
+    .withFailureHandler(err => alert('저장 실패: ' + err.message))
+    .updateNamecard(idx, data);
+}
+
+function delCard(idx, name) {
+  if (!confirm(`'${name}' 명함을 삭제할까요?`)) return;
+  google.script.run
+    .withSuccessHandler(() => {
+      ALL_CARDS = ALL_CARDS.filter(c => c.index !== idx);
+      document.getElementById('totalCount').textContent = ALL_CARDS.length;
+      filterCards(currentFilter, null);
+    })
+    .withFailureHandler(err => alert('삭제 실패: ' + err.message))
+    .deleteNamecard(idx);
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(bg => {
+  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
+});
+
+let stream=null, facingMode='environment', capturedB64=null, capturedMime='image/jpeg';
+
+async function openUpload() {
+  openModal('uploadModal');
+  document.getElementById('camWrap').style.display     = 'block';
+  document.getElementById('camPerm').style.display     = 'none';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('actShoot').style.display    = 'flex';
+  document.getElementById('actConfirm').style.display  = 'none';
+  document.getElementById('progressTrack').style.display = 'none';
+  document.getElementById('uploadMsg').textContent     = '';
+  capturedB64 = null;
+  await startCam();
+}
+
+async function startCam() {
+  stopCam();
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width:{ideal:1920}, height:{ideal:1080} } });
+    document.getElementById('camVideo').srcObject = stream;
+    document.getElementById('camWrap').style.display = 'block';
+    document.getElementById('camPerm').style.display = 'none';
+  } catch(e) {
+    if (e.name==='NotAllowedError'||e.name==='PermissionDeniedError') showPermGuide();
+    else setMsg('❌ 카메라 오류: ' + e.message);
+  }
+}
+
+function showPermGuide() {
+  document.getElementById('camWrap').style.display = 'none';
+  document.getElementById('camPerm').style.display = 'flex';
+  document.getElementById('permGuide').innerHTML = `💻 주소창 🔒 → 사이트 설정 → 카메라 → <b style="color:#c9a84c">허용</b>`;
+}
+
+async function retryCamera() {
+  document.getElementById('camPerm').style.display = 'none';
+  document.getElementById('camWrap').style.display = 'block';
+  await startCam();
+}
+
+async function switchCamera() { facingMode = facingMode==='environment'?'user':'environment'; await startCam(); }
+
+function shoot() {
+  const v=document.getElementById('camVideo'), c=document.getElementById('camCanvas');
+  c.width=v.videoWidth; c.height=v.videoHeight;
+  c.getContext('2d').drawImage(v,0,0);
+  capturedB64=c.toDataURL('image/jpeg',0.92).split(',')[1]; capturedMime='image/jpeg';
+  document.getElementById('previewImg').src='data:image/jpeg;base64,'+capturedB64;
+  document.getElementById('camWrap').style.display     = 'none';
+  document.getElementById('previewWrap').style.display = 'block';
+  document.getElementById('actShoot').style.display    = 'none';
+  document.getElementById('actConfirm').style.display  = 'flex';
+  stopCam();
+}
+
+function retake() {
+  document.getElementById('camWrap').style.display     = 'block';
+  document.getElementById('previewWrap').style.display = 'none';
+  document.getElementById('actShoot').style.display    = 'flex';
+  document.getElementById('actConfirm').style.display  = 'none';
+  capturedB64=null; startCam();
+}
+
+function loadFromFile(input) {
+  const file=input.files[0]; if (!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const url=e.target.result;
+    capturedB64=url.split(',')[1]; capturedMime=file.type;
+    document.getElementById('previewImg').src=url;
+    document.getElementById('camWrap').style.display     = 'none';
+    document.getElementById('previewWrap').style.display = 'block';
+    document.getElementById('actShoot').style.display    = 'none';
+    document.getElementById('actConfirm').style.display  = 'flex';
+    stopCam();
+  };
+  reader.readAsDataURL(file);
+}
+
+function uploadPhoto() {
+  if (!capturedB64) return;
+  const fileName=`namecard_${Date.now()}.jpg`;
+  document.getElementById('actConfirm').style.display    = 'none';
+  document.getElementById('progressTrack').style.display = 'block';
+  setProgress(20); setMsg('드라이브에 업로드 중...');
+  google.script.run
+    .withSuccessHandler(()=>{ setProgress(100); setMsg('✅ 업로드 완료!'); setTimeout(()=>{ closeUpload(); loadCards(); }, 2000); })
+    .withFailureHandler(err=>{ setProgress(0); setMsg('❌ 업로드 실패: '+err.message); document.getElementById('actConfirm').style.display='flex'; })
+    .uploadToDrive(capturedB64, capturedMime, fileName);
+}
+
+function closeUpload() { stopCam(); closeModal('uploadModal'); }
+function stopCam() { if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; } }
+function setProgress(p) { document.getElementById('progressBar').style.width=p+'%'; }
+function setMsg(m)       { document.getElementById('uploadMsg').textContent=m; }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+</script>
+</body>
+</html>
