@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// namecard.gs — 스크립트 속성 동적 로드 적용
+// namecard.gs — 스크립트 속성 동적 로드 및 안정성 보완
 // ══════════════════════════════════════════════
 
 /**
@@ -14,7 +14,7 @@ function getActiveConfig() {
     SHEET_NAME: 'db_namecards',
     LOG_SHEET: 'processed_log',
     GEMINI_MODEL: props.GEMINI_MODEL || 'gemini-3.1-flash-lite',
-    GEMINI_API_KEY: props.GEMINI_API_KEY || '' // 빈 값일 경우 에러 처리를 하도록 구성
+    GEMINI_API_KEY: props.GEMINI_API_KEY || ''
   };
 }
 
@@ -23,9 +23,10 @@ function scanNewNamecards() {
   var config = getActiveConfig();
   var folder = getDriveFolder(config.FOLDER_NAME);
   if (!folder) {
-    Logger.log('폴더를 찾을 수 없습니다: ' + config.FOLDER_NAME);
+    Logger.log('❌ 폴더를 찾을 수 없습니다: ' + config.FOLDER_NAME);
     return;
   }
+  Logger.log('✅ 모니터링 폴더 검색 성공: ' + folder.getName());
 
   var logSheet = getLogSheet();
   var processedIds = getProcessedFileIds(logSheet);
@@ -37,20 +38,27 @@ function scanNewNamecards() {
     var file = files.next();
     var fileId = file.getId();
 
-    // 이미 가공 처리된 파일 건너뛰기
+    // 1. 이미 가공 처리된 파일 건너뛰기
     if (processedIds.indexOf(fileId) !== -1) continue;
 
+    // 2. 비이미지 파일 검증 및 오독 제외 필터링 (Vision API 크래시 방지)
+    if (!isImageFile(file)) {
+      Logger.log('⚠️ 비이미지 파일 제외 처리: ' + file.getName());
+      continue;
+    }
+
     try {
-      Logger.log('명함 분석 시작: ' + file.getName());
+      Logger.log('🚀 명함 신규 분석 시도: ' + file.getName());
       processSingleFile(file, logSheet);
       count++;
-      // 안정적인 구동 및 스크립트 실행 제한 한도(6분) 준수를 위해 배치당 최대 5개 스캔 제한
+      
+      // 구글 앱스 스크립트 6분 타임아웃 방지를 위한 스로틀링 제한 적용
       if (count >= 5) {
-        Logger.log('안정적인 스캔 진행을 위해 이번 배치 스캔을 조기 종료합니다.');
+        Logger.log('⏱️ 안정적인 구동 속도 보장을 위해 한 회당 최대 5개 스캐너 규칙을 수행하고 임시 중단합니다.');
         break;
       }
     } catch (e) {
-      Logger.log('파일 처리 중 치명적 오류 [' + file.getName() + ']: ' + e.toString());
+      Logger.log('❌ 파일 연동 예외 발생 [' + file.getName() + ']: ' + e.toString());
     }
   }
 }
@@ -59,7 +67,7 @@ function scanNewNamecards() {
 function processSingleFile(file, logSheet) {
   var config = getActiveConfig();
   if (!config.GEMINI_API_KEY) {
-    throw new Error('Gemini API Key가 설정되지 않았습니다. 관리자 페이지에서 먼저 키를 저장하세요.');
+    throw new Error('Gemini API Key가 비어있습니다. 설정 대시보드에서 보완해 주세요.');
   }
 
   var fileId = file.getId();
@@ -67,25 +75,25 @@ function processSingleFile(file, logSheet) {
   var base64Data = Utilities.base64Encode(blob.getBytes());
   var mimeType = blob.ContentType;
 
-  // 1. Gemini AI를 통한 광학 문자 분석(OCR) 수행
+  // 1. Gemini AI Vision OCR 파싱 통신
   var rawJson = callGeminiVision(base64Data, mimeType);
   var cardData = parseGeminiOutput(rawJson);
 
-  // 2. 구글 드라이브 내 뷰어 전용 주소 및 완료 폴더 격리 이송
+  // 2. 구글 드라이브 내 완료 격리 폴더로 안전 이동
   var viewUrl = file.getUrl();
   moveFileToDoneFolder(file);
 
-  // 3. Database (Spreadsheet) 중복 여부 판정 및 UPSERT 실행
+  // 3. 스프레드시트 데이터 적재 및 UPSERT 수정 기입
   saveOrUpdateNamecard(cardData, viewUrl);
 
-  // 4. 처리 로그 아카이브 기록
+  // 4. 스캔 로그 최종 커밋 기록
   logSheet.appendRow([fileId, new Date().toISOString()]);
 }
 
 // ── Gemini API 통신 파트 ──────────────────────────
 function callGeminiVision(base64Data, mimeType) {
   var config = getActiveConfig();
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + config.GEMINI_MODEL + ':generateContent?key=' + config.GEMINI_API_KEY;
+  var url = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + config.GEMINI_MODEL + ':generateContent?key=' + config.GEMINI_API_KEY;
 
   var systemInstruction = 
     "You are a professional Business Card OCR parser. " +
@@ -134,7 +142,7 @@ function callGeminiVision(base64Data, mimeType) {
     muteHttpExceptions: true
   };
 
-  // Exponential Backoff retry 알고리즘 적용 (최대 3회 실패 복구)
+  // 지수 백오프 기반 네트워크 안정 기동 처리
   var response, responseCode;
   for (var i = 0; i < 3; i++) {
     try {
@@ -142,14 +150,14 @@ function callGeminiVision(base64Data, mimeType) {
       responseCode = response.getResponseCode();
       if (responseCode === 200) break;
     } catch (err) {
-      Logger.log('연동 중 네트워크 지연 발생 (재시도 중 ' + (i+1) + '/3)');
+      Logger.log('🌐 API 서버 지연 감지, 네트워크 재조율 기동 (' + (i+1) + '/3)');
     }
     Utilities.sleep(Math.pow(2, i) * 1000);
   }
 
   if (!response || responseCode !== 200) {
-    var errMsg = response ? response.getContentText() : '네트워크 통신 불능';
-    throw new Error('Gemini API 호출에 실패했습니다. (HTTP ' + responseCode + '): ' + errMsg);
+    var errMsg = response ? response.getContentText() : '네트워크 연동 실패';
+    throw new Error('Gemini 연동 중 예외가 발생했습니다 (HTTP ' + responseCode + '): ' + errMsg);
   }
 
   return response.getContentText();
@@ -160,12 +168,12 @@ function parseGeminiOutput(responseText) {
     var res = JSON.parse(responseText);
     var textOutput = res.candidates[0].content.parts[0].text;
     
-    // 마크다운 백틱 가드가 포함되어 있을 경우 정규식 정제 처리
+    // Markdown 가드 및 Backtick 문자열 정교하게 전처리 및 파싱
     textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     
     return JSON.parse(textOutput);
   } catch (e) {
-    throw new Error('AI 분석 결과를 JSON 규격으로 파싱하는 데 실패했습니다: ' + e.toString() + '\nRaw Response: ' + responseText);
+    throw new Error('JSON 변환 중 형식 불일치 오류가 나타났습니다: ' + e.toString());
   }
 }
 
@@ -174,12 +182,12 @@ function saveOrUpdateNamecard(card, imageUrl) {
   var config = getActiveConfig();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(config.SHEET_NAME);
-  if (!sheet) throw new Error('데이터베이스 시트를 찾을 수 없습니다: ' + config.SHEET_NAME);
+  if (!sheet) throw new Error('Database 테이블 탐색 실패: ' + config.SHEET_NAME);
 
   var data = sheet.getDataRange().getValues();
   var matchRowIndex = -1;
 
-  // 이메일, 휴대폰, 대표전화 중 하나라도 겹치면 중복 업데이트(UPSERT) 처리
+  // 이메일, 모바일 번호, 사무실 유선번호 비교를 통한 중복 UPSERT 판단
   for (var i = 1; i < data.length; i++) {
     var existingPhone  = String(data[i][5]).replace(/[^0-9]/g, '');
     var existingMobile = String(data[i][6]).replace(/[^0-9]/g, '');
@@ -195,13 +203,13 @@ function saveOrUpdateNamecard(card, imageUrl) {
     else if (targetPhone && targetPhone === existingPhone) isMatch = true;
 
     if (isMatch) {
-      matchRowIndex = i + 1; // 1-based Index 보정
+      matchRowIndex = i + 1;
       break;
     }
   }
 
   if (matchRowIndex !== -1) {
-    // 중복 발견: 수정(UPDATE) 
+    // 중복 레코드: UPDATE
     sheet.getRange(matchRowIndex, 2, 1, 10).setValues([[
       new Date().toISOString(),
       card.company || '',
@@ -214,9 +222,9 @@ function saveOrUpdateNamecard(card, imageUrl) {
       imageUrl,
       'UPDATED'
     ]]);
-    Logger.log('기존 동일 명함을 검색하여 정보를 최신 데이터로 업데이트했습니다. (Row: ' + matchRowIndex + ')');
+    Logger.log('🔄 기존 레코드를 발견하여 명함 데이터를 무결하게 갱신했습니다 (행 번호: ' + matchRowIndex + ')');
   } else {
-    // 신규 등록: 추가(INSERT)
+    // 고유 레코드: INSERT
     var uuid = Utilities.getUuid();
     sheet.appendRow([
       uuid,
@@ -231,7 +239,7 @@ function saveOrUpdateNamecard(card, imageUrl) {
       imageUrl,
       'OK'
     ]);
-    Logger.log('새로운 독자 명함을 등록했습니다.');
+    Logger.log('✨ 새로운 고유 연락처 데이터를 데이터베이스에 적재했습니다.');
   }
 }
 
@@ -240,22 +248,14 @@ function moveFileToDoneFolder(file) {
   var config = getActiveConfig();
   var doneFolder = getDriveFolder(config.DONE_FOLDER);
   if (!doneFolder) {
-    // 이동 보관 완료 폴더가 없을 경우 자동 프로비저닝 생성
     var parentFolder = file.getParents().hasNext() ? file.getParents().next() : DriveApp.getRootFolder();
     doneFolder = parentFolder.createFolder(config.DONE_FOLDER);
   }
   
-  // 새 폴더에 연동 추가 및 기존 폴더 링크 제거 수행
-  doneFolder.addFile(file);
-  var parentFolders = file.getParents();
-  while (parentFolders.hasNext()) {
-    var p = parentFolders.next();
-    if (p.getId() !== doneFolder.getId()) {
-      p.removeFile(file);
-    }
-  }
-  // 타 사용자가 뷰어로 명함 원본 이미지를 볼 수 있도록 읽기 전용 공유 권한 설정
+  // 구형 Google Drive API를 최신 moveTo 표준 규격으로 업그레이드 (중복/단축키 결함 해결)
+  file.moveTo(doneFolder);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  Logger.log('📦 명함 이미지 파일 격리 격하 이송 완료: ' + file.getName());
 }
 
 // ── 유틸리티 보조 도구 ────────────────────────────
@@ -263,6 +263,11 @@ function getDriveFolder(folderName) {
   var folders = DriveApp.getFoldersByName(folderName);
   if (folders.hasNext()) return folders.next();
   return null;
+}
+
+function isImageFile(file) {
+  var mime = file.getMimeType();
+  return mime.startsWith('image/') || mime === 'application/pdf';
 }
 
 function getLogSheet() {
