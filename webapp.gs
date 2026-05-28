@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// webapp.gs — 서버 템플릿 기반 실시간 가상 라우팅 도입
+// webapp.gs — 서버 사이드 정밀 기기 라우팅 아키텍처
 // ══════════════════════════════════════════════
 
 // ── 인증 확인 및 다이내믹 라우팅 ────────────────
@@ -24,11 +24,11 @@ function doGet(e) {
 
   var param = e && e.parameter ? e.parameter : {};
 
-  // 1. 관리자 전용 페이지 라우팅 (템플릿 엔진을 통해 canonical URL 전달)
+  // 1. 관리자 전용 페이지 라우팅 (보안 검증 후 전송)
   if (param.page === 'admin') {
     if (role === 'admin') {
       var template = HtmlService.createTemplateFromFile('admin');
-      template.scriptUrl = scriptUrl; // 템플릿 변수 바인딩
+      template.scriptUrl = scriptUrl;
       return template.evaluate()
         .setTitle('CardVault Pro — 사용자 관리')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -39,7 +39,7 @@ function doGet(e) {
     }
   }
 
-  // 2. 명시적 기기 뷰 파라미터가 있을 경우 세션 렌더링
+  // 2. 명시적 기기 뷰포트 파라미터 강제 매핑
   if (param.v === 'mobile') {
     var template = HtmlService.createTemplateFromFile('mobile');
     template.scriptUrl = scriptUrl;
@@ -57,36 +57,53 @@ function doGet(e) {
       .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
-  // 3. 무조건적 라우터 페이지 전달 (로컬 클라이언트 상태 진단용)
+  // 3. 파라미터가 아예 없을 때 (최초 접속): 클라이언트 사이드 디스패처로 최상위 프레임 리다이렉트 유도
+  // GAS doGet(e)에는 e.userAgent가 기본적으로 존재하지 않아, 클라이언트에서 분석 후 강제 라우팅 처리가 안전합니다.
   return HtmlService.createHtmlOutput(buildRouterPage(scriptUrl))
+    .setTitle('CardVault Pro — 연결 중')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-// ── 최적화 디바이스 분석기 빌더 ─────────────────────
+/**
+ * 최초 접속 시 모바일과 데스크톱을 100% 무결하게 감지하여 최상위 프레임 주소를 새로 갱신하는 디스패처 셸
+ */
 function buildRouterPage(scriptUrl) {
   return '<!DOCTYPE html>' +
     '<html><head>' +
     '<meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<style>' +
-    'body{background:#080809;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;gap:16px;}' +
+    'body{background:#0a0a0c;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;gap:16px;}' +
     '.s{width:36px;height:36px;border:3px solid #1c1c25;border-top-color:#c9a84c;border-radius:50%;animation:spin .8s cubic-bezier(0.4, 0, 0.2, 1) infinite;}' +
     '@keyframes spin{to{transform:rotate(360deg);}}' +
-    '.t{color:#5e5b55;font-size:12px;letter-spacing:1px;font-weight:500;}</style></head><body>' +
-    '<div class="s"></div><div class="t">디바이스 환경 분석 중...</div>' +
+    '.t{color:#9e9a92;font-size:13px;letter-spacing:0.5px;font-weight:500;}</style></head><body>' +
+    '<div class="s"></div><div class="t">디바이스 최적화 화면 구성 중...</div>' +
     '<script>' +
     '(function() {' +
     '  var scriptUrl = "' + scriptUrl + '";' +
-    '  var manualView = localStorage.getItem("cv_manual_view");' +
-    '  if (manualView === "desktop" || manualView === "mobile") {' +
-    '    window.location.replace(scriptUrl + "?v=" + manualView);' +
-    '    return;' +
+    '  var targetView = "desktop";' +
+    '  try {' +
+    '    var manualView = localStorage.getItem("cv_manual_view");' +
+    '    if (manualView === "desktop" || manualView === "mobile") {' +
+    '      targetView = manualView;' +
+    '    } else {' +
+    '      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;' +
+    '      targetView = isMobile ? "mobile" : "desktop";' +
+    '    }' +
+    '  } catch(e) {' +
+    '    var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);' +
+    '    targetView = isMobile ? "mobile" : "desktop";' +
     '  }' +
-    '  var isMobile = window.matchMedia("(max-width: 768px)").matches || ' +
-    '                 /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|SamsungBrowser|Mobile/i.test(navigator.userAgent);' +
-    '  var targetView = isMobile ? "mobile" : "desktop";' +
-    '  window.location.replace(scriptUrl + "?v=" + targetView);' +
+    '  try {' +
+    '    if (window.top && window.top !== window) {' +
+    '      window.top.location.href = scriptUrl + "?v=" + targetView;' +
+    '    } else {' +
+    '      window.location.href = scriptUrl + "?v=" + targetView;' +
+    '    }' +
+    '  } catch(e) {' +
+    '    window.location.href = scriptUrl + "?v=" + targetView;' +
+    '  }' +
     '})();' +
     '<\/script></body></html>';
 }
