@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>사용자 관리 — CardVault Pro</title>
+<title>사용자 및 시스템 관리 — CardVault Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -11,6 +11,7 @@
     --border:rgba(255,255,255,.07); --gold:#c9a84c;
     --gold-dim:rgba(201,168,76,.12); --text:#f0ede8;
     --muted:#5e5b55; --sub:#9e9a92; --danger:#e05555;
+    --success:#4ade80;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'DM Sans','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
@@ -26,19 +27,31 @@
   .page-tag{font-size:12px;color:var(--muted);border-left:1px solid var(--border);padding-left:16px;}
   .back-btn{margin-left:auto;font-size:13px;color:var(--gold);text-decoration:none;display:flex;align-items:center;gap:6px;cursor:pointer;background:none;border:none;font-family:inherit;}
 
-  .main{max-width:800px;margin:0 auto;padding:36px 24px;}
-
+  .main{max-width:850px;margin:0 auto;padding:36px 24px;}
   .section-title{font-family:'DM Serif Display',serif;font-size:26px;margin-bottom:6px;}
   .section-sub{font-size:13px;color:var(--muted);margin-bottom:28px;}
 
-  /* 추가 폼 */
-  .add-form{
+  /* ── 탭 컨트롤 (Tabs) ── */
+  .tabs-nav{display:flex;gap:8px;border-bottom:1px solid var(--border);margin-bottom:28px;padding-bottom:1px;}
+  .tab-btn{
+    padding:12px 20px;background:none;border:none;color:var(--muted);
+    font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;
+    border-bottom:2px solid transparent;transition:all .2s;
+  }
+  .tab-btn:hover{color:var(--sub);}
+  .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .tab-content{display:none;animation:fadeIn .3s ease both;}
+  .tab-content.active{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  /* ── 추가 폼 및 정보 카드 ── */
+  .config-card, .add-form{
     background:var(--surface);border:1px solid var(--border);
     border-radius:16px;padding:24px;margin-bottom:24px;
   }
   .form-title{font-size:14px;font-weight:600;margin-bottom:16px;color:var(--sub);letter-spacing:.5px;text-transform:uppercase;}
-  .form-row{display:flex;gap:10px;flex-wrap:wrap;}
-  .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;}
+  .form-row{display:flex;gap:12px;flex-wrap:wrap;}
+  .field{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px;position:relative;}
   .field label{font-size:10px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;font-weight:600;}
   .field input, .field select{
     background:rgba(255,255,255,.03);border:1px solid var(--border);
@@ -47,16 +60,26 @@
   }
   .field input:focus,.field select:focus{border-color:rgba(201,168,76,.5);}
   .field select option{background:#17171e;}
-  .btn-add{
-    padding:10px 22px;background:linear-gradient(135deg,#c9a84c,#9a7530);
+  
+  /* 비밀번호 표시/숨기기용 래퍼 및 버튼 */
+  .pw-wrapper{position:relative;display:flex;width:100%;}
+  .pw-wrapper input{padding-right:44px;width:100%;}
+  .pw-toggle{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);
+    background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;
+  }
+  .pw-toggle:hover{color:var(--sub);}
+
+  .btn-add, .btn-save{
+    padding:11px 22px;background:linear-gradient(135deg,#c9a84c,#9a7530);
     border:none;border-radius:8px;color:#0a0a0c;font-size:13px;
     font-weight:700;cursor:pointer;font-family:inherit;
     align-self:flex-end;white-space:nowrap;
     transition:opacity .15s;
   }
-  .btn-add:hover{opacity:.88;}
+  .btn-add:hover, .btn-save:hover{opacity:.88;}
 
-  /* 사용자 테이블 */
+  /* ── 사용자 테이블 ── */
   .table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
   .table-header{
     display:grid;grid-template-columns:1fr .6fr .4fr .5fr .3fr;
@@ -98,6 +121,10 @@
 
   .empty-users{padding:48px;text-align:center;color:var(--muted);font-size:14px;}
 
+  /* ── 알림 가이드 ── */
+  .info-desc{font-size:12px;color:var(--sub);line-height:1.6;margin-top:8px;}
+  .info-desc code{background:rgba(255,255,255,.05);padding:2px 5px;border-radius:4px;color:var(--gold);font-family:monospace;}
+
   /* 토스트 */
   .toast{
     position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
@@ -115,6 +142,26 @@
   .spinner{width:20px;height:20px;border:2px solid rgba(201,168,76,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg);}}
 
+  /* 커스텀 Confirm / Alert 모달 스타일 */
+  .modal-bg {
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 24px; width: 100%; max-width: 340px;
+    text-align: center; padding: 24px; animation: modalIn .25s cubic-bezier(.32,.72,0,1);
+  }
+  .btn-g {
+    flex: 1; padding: 10px; background: linear-gradient(135deg, #c9a84c, #9a7530);
+    border: none; border-radius: 10px; color: #0a0a0c; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  }
+  .btn-gh {
+    flex: 1; padding: 10px; background: rgba(255,255,255,.04); border: 1px solid var(--border);
+    border-radius: 10px; color: var(--sub); font-size: 13px; cursor: pointer; font-family: inherit;
+  }
+  @keyframes modalIn { from{opacity:0;transform:scale(.96)translateY(8px)} to{opacity:1;transform:none} }
+
   @media(max-width:600px){
     header{padding:0 16px;}
     .main{padding:24px 16px;}
@@ -123,6 +170,8 @@
     .table-header > *:nth-child(5),
     .user-row > *:nth-child(4){display:none;}
     .row-actions{flex-direction:column;}
+    .form-row{flex-direction:column;}
+    .btn-add, .btn-save{width:100%;}
   }
 </style>
 </head>
@@ -131,59 +180,179 @@
 <header>
   <span class="logo">CardVault</span>
   <span class="logo-badge">PRO</span>
-  <span class="page-tag">사용자 관리</span>
+  <span class="page-tag">관리 대시보드</span>
   <button class="back-btn" onclick="goBack()">← 명함 목록으로</button>
 </header>
 
 <div class="main">
-  <div class="section-title">사용자 관리</div>
-  <div class="section-sub">Google OAuth 인증 기반으로 접근을 허용할 이메일을 관리합니다</div>
+  <div class="section-title">시스템 관리자 설정</div>
+  <div class="section-sub">접근 가능 도메인 멤버십 권한 및 Gemini AI 엔진 매개변수를 관리합니다</div>
 
-  <!-- 추가 폼 -->
-  <div class="add-form">
-    <div class="form-title">새 사용자 추가</div>
-    <div class="form-row">
-      <div class="field">
-        <label>이메일</label>
-        <input type="email" id="newEmail" placeholder="example@gmail.com">
+  <!-- ── 탭 내비게이션 ── -->
+  <div class="tabs-nav">
+    <button class="tab-btn active" onclick="switchTab('userTab', this)">👥 구성원 관리</button>
+    <button class="tab-btn" onclick="switchTab('configTab', this)">⚙️ 시스템 환경설정</button>
+  </div>
+
+  <!-- ── TAB 1: 사용자 관리 ── -->
+  <div class="tab-content active" id="userTab">
+    <!-- 추가 폼 -->
+    <div class="add-form">
+      <div class="form-title">새 사용자 추가</div>
+      <div class="form-row">
+        <div class="field">
+          <label>이메일</label>
+          <input type="email" id="newEmail" placeholder="example@gmail.com">
+        </div>
+        <div class="field" style="max-width:180px">
+          <label>이름 (선택)</label>
+          <input type="text" id="newName" placeholder="홍길동">
+        </div>
+        <div class="field" style="max-width:140px">
+          <label>역할</label>
+          <select id="newRole">
+            <option value="user">일반 사용자</option>
+            <option value="admin">관리자</option>
+          </select>
+        </div>
+        <button class="btn-add" onclick="addUser()">+ 추가</button>
       </div>
-      <div class="field" style="max-width:180px">
-        <label>이름 (선택)</label>
-        <input type="text" id="newName" placeholder="홍길동">
+    </div>
+
+    <!-- 사용자 목록 -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <span>이메일</span>
+        <span>이름</span>
+        <span>역할</span>
+        <span>등록일</span>
+        <span></span>
       </div>
-      <div class="field" style="max-width:140px">
-        <label>역할</label>
-        <select id="newRole">
-          <option value="user">일반 사용자</option>
-          <option value="admin">관리자</option>
-        </select>
+      <div id="userList">
+        <div class="loading-wrap"><div class="spinner"></div><span>불러오는 중</span></div>
       </div>
-      <button class="btn-add" onclick="addUser()">+ 추가</button>
     </div>
   </div>
 
-  <!-- 사용자 목록 -->
-  <div class="table-wrap">
-    <div class="table-header">
-      <span>이메일</span>
-      <span>이름</span>
-      <span>역할</span>
-      <span>등록일</span>
-      <span></span>
-    </div>
-    <div id="userList">
-      <div class="loading-wrap"><div class="spinner"></div><span>불러오는 중</span></div>
+  <!-- ── TAB 2: 시스템 환경설정 ── -->
+  <div class="tab-content" id="configTab">
+    <div class="config-card">
+      <div class="form-title">AI 엔진 및 스토리지 구성</div>
+      
+      <div class="form-row" style="flex-direction: column; gap: 18px;">
+        <!-- API Key Input -->
+        <div class="field" style="width: 100%;">
+          <label>Gemini API Key</label>
+          <div class="pw-wrapper">
+            <input type="password" id="cfgApiKey" placeholder="AI Studio에서 발급받은 API 키를 입력하세요">
+            <button type="button" class="pw-toggle" onclick="togglePasswordVisibility('cfgApiKey')">👁️</button>
+          </div>
+          <p class="info-desc">Google AI Studio에서 발급한 개인 API Key입니다. 스크립트 소스코드 유출 시에도 안전한 <code>PropertiesService</code> 보관소에 저장됩니다.</p>
+        </div>
+
+        <!-- Model Select / Input -->
+        <div class="field" style="width: 100%;">
+          <label>Gemini AI 모델 선택</label>
+          <select id="cfgModel">
+            <option value="gemini-3.1-flash-lite">gemini-3.1-flash-lite (추천 - 초고속 & 최고 효율)</option>
+            <option value="gemini-2.5-flash-preview-09-2025">gemini-2.5-flash-preview-09-2025</option>
+            <option value="custom">직접 지정하기 (사용자 설정 모델)</option>
+          </select>
+          <div id="customModelWrap" style="display: none; margin-top: 8px;">
+            <input type="text" id="cfgCustomModel" placeholder="예: gemini-3.5-pro">
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; width: 100%; flex-wrap: wrap;">
+          <!-- Folder Name (Input) -->
+          <div class="field" style="flex: 1; min-width: 240px;">
+            <label>스캔 대상 구글 드라이브 폴더명</label>
+            <input type="text" id="cfgFolderName" placeholder="기본값: Namecard_Images">
+            <p class="info-desc">스캐너가 1분 마다 모니터링하여 미처리 명함을 탐색할 드라이브 루트 내 폴더명입니다.</p>
+          </div>
+
+          <!-- Done Folder Name -->
+          <div class="field" style="flex: 1; min-width: 240px;">
+            <label>완료 처리 폴더명</label>
+            <input type="text" id="cfgDoneFolder" placeholder="기본값: Namecard_Done">
+            <p class="info-desc">데이터 추출이 완료된 명함 이미지 원본 파일이 자동 보관 및 격리될 폴더명입니다.</p>
+          </div>
+        </div>
+
+        <button class="btn-save" onclick="saveConfig()" style="margin-top: 12px;">💾 변경 사항 저장</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
+<!-- 커스텀 Confirm 다이얼로그 모달 -->
+<div class="modal-bg" id="customConfirmModal" style="display:none;">
+  <div class="modal">
+    <div style="font-size:32px; margin-bottom:12px;">💡</div>
+    <div id="confirmMessage" style="margin-bottom:24px; font-size:14px; color:var(--text); line-height:1.6; font-weight:500;"></div>
+    <div style="display:flex; gap:10px;">
+      <button class="btn-gh" id="confirmCancelBtn">취소</button>
+      <button class="btn-g" id="confirmOkBtn">확인</button>
+    </div>
+  </div>
+</div>
+
 <script>
+// ── iframe 전용 알림 인터페이스 정의 ───────────────────────
+function showConfirm(msg, onOk) {
+  const modal = document.getElementById('customConfirmModal');
+  document.getElementById('confirmMessage').textContent = msg;
+  modal.style.display = 'flex';
+  
+  const okBtn = document.getElementById('confirmOkBtn');
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  
+  const cleanup = () => {
+    modal.style.display = 'none';
+    okBtn.onclick = null;
+    cancelBtn.onclick = null;
+  };
+  
+  okBtn.onclick = () => { cleanup(); onOk(); };
+  cancelBtn.onclick = () => { cleanup(); };
+}
+
 let USERS = [];
 
-window.addEventListener('load', loadUsers);
+window.addEventListener('load', () => {
+  loadUsers();
+  loadSystemSettings();
+  
+  // 모델 선택 드롭다운 이벤트 바인딩
+  document.getElementById('cfgModel').addEventListener('change', function() {
+    const wrap = document.getElementById('customModelWrap');
+    wrap.style.display = this.value === 'custom' ? 'block' : 'none';
+  });
+});
 
+/* ── 탭 기동 제어 ── */
+function switchTab(tabId, el) {
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  
+  document.getElementById(tabId).classList.add('active');
+  el.classList.add('active');
+}
+
+/* ── 비밀번호 표시 제어 ── */
+function togglePasswordVisibility(inputId) {
+  const inp = document.getElementById(inputId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+  } else {
+    inp.type = 'password';
+  }
+}
+
+/* ── 구성원 데이터 로드 및 렌더링 ── */
 function loadUsers() {
   google.script.run
     .withSuccessHandler(renderUsers)
@@ -240,23 +409,86 @@ function addUser() {
 
 function toggleRole(rowIndex, currentRole) {
   const newRole = currentRole === 'admin' ? 'user' : 'admin';
-  if (!confirm(`역할을 "${newRole === 'admin' ? '관리자' : '일반 사용자'}"로 변경할까요?`)) return;
-  google.script.run
-    .withSuccessHandler(() => { showToast('✅ 역할이 변경되었습니다', 'ok'); loadUsers(); })
-    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
-    .updateUserRole(rowIndex, newRole);
+  showConfirm(`역할을 "${newRole === 'admin' ? '관리자' : '일반 사용자'}"로 변경할까요?`, () => {
+    google.script.run
+      .withSuccessHandler(() => { showToast('✅ 역할이 변경되었습니다', 'ok'); loadUsers(); })
+      .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+      .updateUserRole(rowIndex, newRole);
+  });
 }
 
 function removeUser(rowIndex, email) {
-  if (!confirm(`"${email}" 사용자를 삭제할까요?`)) return;
+  showConfirm(`"${email}" 사용자를 삭제할까요?`, () => {
+    google.script.run
+      .withSuccessHandler(() => { showToast('✅ 삭제되었습니다', 'ok'); loadUsers(); })
+      .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
+      .removeUser(rowIndex);
+  });
+}
+
+/* ── 시스템 환경설정 제어 ── */
+function loadSystemSettings() {
   google.script.run
-    .withSuccessHandler(() => { showToast('✅ 삭제되었습니다', 'ok'); loadUsers(); })
-    .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
-    .removeUser(rowIndex);
+    .withSuccessHandler(settings => {
+      if (settings) {
+        document.getElementById('cfgApiKey').value = settings.GEMINI_API_KEY || '';
+        document.getElementById('cfgFolderName').value = settings.FOLDER_NAME || 'Namecard_Images';
+        document.getElementById('cfgDoneFolder').value = settings.DONE_FOLDER || 'Namecard_Done';
+        
+        const modelSelect = document.getElementById('cfgModel');
+        const customWrap = document.getElementById('customModelWrap');
+        const customInput = document.getElementById('cfgCustomModel');
+        
+        const modelVal = settings.GEMINI_MODEL || 'gemini-3.1-flash-lite';
+        
+        if (modelVal === 'gemini-3.1-flash-lite' || modelVal === 'gemini-2.5-flash-preview-09-2025') {
+          modelSelect.value = modelVal;
+          customWrap.style.display = 'none';
+        } else {
+          modelSelect.value = 'custom';
+          customInput.value = modelVal;
+          customWrap.style.display = 'block';
+        }
+      }
+    })
+    .withFailureHandler(err => showToast('❌ 스토리지 정보를 가져오지 못했습니다: ' + err.message, 'err'))
+    .getSystemConfigs();
+}
+
+function saveConfig() {
+  const apiKey = document.getElementById('cfgApiKey').value.trim();
+  const folderName = document.getElementById('cfgFolderName').value.trim() || 'Namecard_Images';
+  const doneFolder = document.getElementById('cfgDoneFolder').value.trim() || 'Namecard_Done';
+  
+  const modelSelect = document.getElementById('cfgModel').value;
+  let modelVal = modelSelect;
+  if (modelSelect === 'custom') {
+    modelVal = document.getElementById('cfgCustomModel').value.trim();
+    if (!modelVal) {
+      showToast('❌ 커스텀 모델 모델명을 입력해주세요.', 'err');
+      return;
+    }
+  }
+  
+  const settings = {
+    GEMINI_API_KEY: apiKey,
+    GEMINI_MODEL: modelVal,
+    FOLDER_NAME: folderName,
+    DONE_FOLDER: doneFolder
+  };
+  
+  google.script.run
+    .withSuccessHandler(() => {
+      showToast('✅ 시스템 환경설정이 성공적으로 저장되었습니다.', 'ok');
+      loadSystemSettings();
+    })
+    .withFailureHandler(err => showToast('❌ 저장 오류: ' + err.message, 'err'))
+    .saveSystemConfigs(settings);
 }
 
 function goBack() {
-  const url = window.location.href.split('?')[0] + '?mobile=0';
+  const view = localStorage.getItem("cv_manual_view") || 'desktop';
+  const url = window.location.href.split('?')[0] + '?v=' + view;
   window.location.href = url;
 }
 
