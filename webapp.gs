@@ -1,8 +1,8 @@
 // ══════════════════════════════════════════════
-// webapp.gs — 전체 교체
+// webapp.gs — 최적화 라우팅 및 기기 격리 적용
 // ══════════════════════════════════════════════
 
-// ── 인증 확인 ──────────────────────────────────
+// ── 인증 확인 및 다이내믹 라우팅 ────────────────
 function doGet(e) {
   var user = Session.getActiveUser().getEmail();
   var scriptUrl = ScriptApp.getService().getUrl();
@@ -20,71 +20,57 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  var props = PropertiesService.getUserProperties();
-  var propKey = 'isMobile_' + user;
   var param = e && e.parameter ? e.parameter : {};
 
-  // 관리자 페이지
+  // 1. 관리자 전용 페이지 라우팅
   if (param.page === 'admin' && role === 'admin') {
     return HtmlService.createHtmlOutputFromFile('admin')
       .setTitle('CardVault Pro — 사용자 관리')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  // 강제 전환 (수동 스위치)
-  if (param.switch === 'mobile') {
-    props.setProperty(propKey, '1');
+  // 2. 명시적 기기 뷰 파라미터가 있을 경우 세션 렌더링
+  if (param.v === 'mobile') {
     return HtmlService.createHtmlOutputFromFile('mobile')
-      .setTitle('CardVault Pro')
+      .setTitle('CardVault Pro (Mobile)')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
-  if (param.switch === 'desktop') {
-    props.setProperty(propKey, '0');
+  if (param.v === 'desktop') {
     return HtmlService.createHtmlOutputFromFile('index')
-      .setTitle('CardVault Pro')
+      .setTitle('CardVault Pro (Desktop)')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  // mobile 파라미터로 진입 시 저장
-  if (param.mobile !== undefined && param.mobile !== '') {
-    props.setProperty(propKey, param.mobile);
-  }
-
-  // 저장된 값 조회
-  var saved = props.getProperty(propKey);
-
-  // 없으면 UA 감지 페이지
-  if (!saved) {
-    return HtmlService.createHtmlOutput(buildDetectPage(scriptUrl))
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  }
-
-  var template = (saved === '1') ? 'mobile' : 'index';
-  return HtmlService.createHtmlOutputFromFile(template)
-    .setTitle('CardVault Pro')
+  // 3. 무조건적 라우터 페이지 전달 (로컬 클라이언트 상태 진단용)
+  return HtmlService.createHtmlOutput(buildRouterPage(scriptUrl))
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-// ── HTML 빌더 ───────────────────────────────────
-function buildDetectPage(scriptUrl) {
+// ── 최적화 디바이스 분석기 빌더 ─────────────────────
+function buildRouterPage(scriptUrl) {
   return '<!DOCTYPE html>' +
     '<html><head>' +
     '<meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width,initial-scale=1">' +
-    '<style>body{background:#080809;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;gap:12px;}' +
-    '.s{width:32px;height:32px;border:3px solid #1c1c25;border-top-color:#c9a84c;border-radius:50%;animation:spin .7s linear infinite;}' +
+    '<style>' +
+    'body{background:#080809;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;font-family:sans-serif;gap:16px;}' +
+    '.s{width:36px;height:36px;border:3px solid #1c1c25;border-top-color:#c9a84c;border-radius:50%;animation:spin .8s cubic-bezier(0.4, 0, 0.2, 1) infinite;}' +
     '@keyframes spin{to{transform:rotate(360deg);}}' +
-    '.t{color:#4a4845;font-size:11px;letter-spacing:1px;}</style></head><body>' +
-    '<div class="s"></div><div class="t">환경 감지 중...</div>' +
-    '<form id="f" method="get" action="' + scriptUrl + '">' +
-    '<input type="hidden" name="mobile" id="mi" value="0">' +
-    '</form>' +
+    '.t{color:#5e5b55;font-size:12px;letter-spacing:1px;font-weight:500;}</style></head><body>' +
+    '<div class="s"></div><div class="t">디바이스 환경 분석 중...</div>' +
     '<script>' +
-    'var ua=navigator.userAgent||"";' +
-    'var isMobile=/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|SamsungBrowser|Mobile/i.test(ua)||' +
-    '(navigator.maxTouchPoints>1&&!/Macintosh/i.test(ua));' +
-    'document.getElementById("mi").value=isMobile?"1":"0";' +
-    'document.getElementById("f").submit();' +
+    '(function() {' +
+    '  var scriptUrl = "' + scriptUrl + '";' +
+    '  var manualView = localStorage.getItem("cv_manual_view");' +
+    '  if (manualView === "desktop" || manualView === "mobile") {' +
+    '    window.location.replace(scriptUrl + "?v=" + manualView);' +
+    '    return;' +
+    '  }' +
+    '  var isMobile = window.matchMedia("(max-width: 768px)").matches || ' +
+    '                 /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|SamsungBrowser|Mobile/i.test(navigator.userAgent);' +
+    '  var targetView = isMobile ? "mobile" : "desktop";' +
+    '  window.location.replace(scriptUrl + "?v=" + targetView);' +
+    '})();' +
     '<\/script></body></html>';
 }
 
@@ -268,4 +254,31 @@ function uploadToDrive(base64Data, mimeType, fileName) {
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { success: true, fileId: file.getId() };
+}
+
+// webapp.gs 에 추가할 환경설정 API
+function getSystemConfigs() {
+  var cur = getCurrentUser();
+  if (cur.role !== 'admin') throw new Error('권한 없음');
+  
+  var props = PropertiesService.getScriptProperties().getProperties();
+  return {
+    GEMINI_API_KEY: props.GEMINI_API_KEY || '',
+    GEMINI_MODEL: props.GEMINI_MODEL || 'gemini-3.1-flash-lite',
+    FOLDER_NAME: props.FOLDER_NAME || 'Namecard_Images',
+    DONE_FOLDER: props.DONE_FOLDER || 'Namecard_Done'
+  };
+}
+
+function saveSystemConfigs(settings) {
+  var cur = getCurrentUser();
+  if (cur.role !== 'admin') throw new Error('권한 없음');
+  
+  PropertiesService.getScriptProperties().setProperties({
+    GEMINI_API_KEY: settings.GEMINI_API_KEY,
+    GEMINI_MODEL: settings.GEMINI_MODEL,
+    FOLDER_NAME: settings.FOLDER_NAME,
+    DONE_FOLDER: settings.DONE_FOLDER
+  });
+  return { success: true };
 }
