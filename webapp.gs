@@ -248,15 +248,16 @@ function updateNamecard(rowIndex, data) {
 function uploadToDrive(base64Data, mimeType, fileName) {
   var cur = getCurrentUser();
   if (!cur.role) throw new Error('권한 없음');
-  var folder = getDriveFolder(CONFIG.FOLDER_NAME);
-  if (!folder) throw new Error('Namecard_Images 폴더를 찾을 수 없습니다');
+  var config = getActiveConfig(); // 동적 속성 로드 함수로 대체하여 버그 해결
+  var folder = getDriveFolder(config.FOLDER_NAME);
+  if (!folder) throw new Error(config.FOLDER_NAME + ' 폴더를 찾을 수 없습니다');
   var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
   var file = folder.createFile(blob);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   return { success: true, fileId: file.getId() };
 }
 
-// webapp.gs 에 추가할 환경설정 API
+// ── 시스템 환경설정 제어 ────────────────────────────
 function getSystemConfigs() {
   var cur = getCurrentUser();
   if (cur.role !== 'admin') throw new Error('권한 없음');
