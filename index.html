@@ -379,8 +379,21 @@
 </div>
 
 <script>
-// ── 서버에서 전달받은 Canonical URL ──
+// ── 서버사이드 주입 Canonical URL ──
 const SCRIPT_URL = "<?= scriptUrl ?>";
+
+// ── iframe 샌드박스 완벽 우회용 최상위 프레임 내비게이터 ──────────────────────
+function navigateTo(url) {
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (e) {
+    window.location.href = url;
+  }
+}
 
 // ── iframe 전용 알림 인터페이스 정의 ───────────────────────
 function showConfirm(msg, onOk) {
@@ -423,12 +436,12 @@ google.script.run
   .getCurrentUser();
 
 function goAdmin() {
-  window.location.href = SCRIPT_URL + '?page=admin';
+  navigateTo(SCRIPT_URL + '?page=admin');
 }
 
 function switchToMobile() {
-  localStorage.setItem("cv_manual_view", "mobile"); // 로컬 스토리지 상태 저장
-  window.location.href = SCRIPT_URL + '?v=mobile';
+  try { localStorage.setItem("cv_manual_view", "mobile"); } catch(e){}
+  navigateTo(SCRIPT_URL + '?v=mobile');
 }
 
 let ALL_CARDS = [], currentFilter = 'all', lastUpdated = '', pollTimer = null;
