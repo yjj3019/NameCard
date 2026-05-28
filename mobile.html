@@ -443,6 +443,9 @@
 </div>
 
 <script>
+// ── 서버에서 전달받은 Canonical URL ──
+const SCRIPT_URL = "<?= scriptUrl ?>";
+
 // ── iframe 전용 알림 인터페이스 정의 ───────────────────────
 function showConfirm(msg, onOk) {
   const modal = document.getElementById('customConfirmModal');
@@ -696,11 +699,19 @@ document.querySelectorAll('.ovl').forEach(o => {
 /* ── 설정 및 뷰 제어 ── */
 function goAdmin() {
   closeOvl('setOvl');
-  window.location.href = window.location.href.split('?')[0] + '?page=admin';
+  if (window.cvRouter) {
+    window.cvRouter.navigate('admin');
+  } else {
+    window.location.href = SCRIPT_URL + '?page=admin';
+  }
 }
 function goDesktop() {
-  localStorage.setItem("cv_manual_view", "desktop"); // 기기 수동 전환용 로컬저장소 기록 고정
-  window.location.href = window.location.href.split('?')[0] + '?v=desktop';
+  if (window.cvRouter) {
+    window.cvRouter.setManualView('desktop');
+  } else {
+    try { localStorage.setItem("cv_manual_view", "desktop"); } catch(e){}
+    window.location.href = SCRIPT_URL + '?v=desktop';
+  }
 }
 
 /* ── 카메라 ── */
