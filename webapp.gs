@@ -58,7 +58,6 @@ function doGet(e) {
   }
 
   // 3. 파라미터가 아예 없을 때 (최초 접속): 클라이언트 사이드 디스패처로 최상위 프레임 리다이렉트 유도
-  // GAS doGet(e)에는 e.userAgent가 기본적으로 존재하지 않아, 클라이언트에서 분석 후 강제 라우팅 처리가 안전합니다.
   return HtmlService.createHtmlOutput(buildRouterPage(scriptUrl))
     .setTitle('CardVault Pro — 연결 중')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
@@ -88,7 +87,7 @@ function buildRouterPage(scriptUrl) {
     '    if (manualView === "desktop" || manualView === "mobile") {' +
     '      targetView = manualView;' +
     '    } else {' +
-    '      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;' +
+    '      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);' +
     '      targetView = isMobile ? "mobile" : "desktop";' +
     '    }' +
     '  } catch(e) {' +
