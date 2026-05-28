@@ -301,26 +301,20 @@
 </div>
 
 <script>
-// ── 서버에서 전달받은 Canonical URL ──
+// ── 서버사이드 주입 Canonical URL ──
 const SCRIPT_URL = "<?= scriptUrl ?>";
 
-// ── iframe 전용 알림 인터페이스 정의 ───────────────────────
-function showConfirm(msg, onOk) {
-  const modal = document.getElementById('customConfirmModal');
-  document.getElementById('confirmMessage').textContent = msg;
-  modal.style.display = 'flex';
-  
-  const okBtn = document.getElementById('confirmOkBtn');
-  const cancelBtn = document.getElementById('confirmCancelBtn');
-  
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  
-  okBtn.onclick = () => { cleanup(); onOk(); };
-  cancelBtn.onclick = () => { cleanup(); };
+// ── iframe 샌드박스 완벽 우회용 최상위 프레임 내비게이터 ──────────────────────
+function navigateTo(url) {
+  try {
+    if (window.top && window.top !== window) {
+      window.top.location.href = url;
+    } else {
+      window.location.href = url;
+    }
+  } catch (e) {
+    window.location.href = url;
+  }
 }
 
 let USERS = [];
@@ -490,8 +484,11 @@ function saveConfig() {
 }
 
 function goBack() {
-  const view = localStorage.getItem("cv_manual_view") || 'desktop';
-  window.location.href = SCRIPT_URL + '?v=' + view;
+  var view = 'desktop';
+  try {
+    view = localStorage.getItem("cv_manual_view") || 'desktop';
+  } catch(e) {}
+  navigateTo(SCRIPT_URL + '?v=' + view);
 }
 
 function formatDate(ts) {
