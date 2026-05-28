@@ -256,9 +256,9 @@
   .spin-txt { font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
   @keyframes spin { to { transform:rotate(360deg); } }
 
-  /* Default Image Styles */
+  /* Default Image Styles (Mobile) */
   .card-banner-default {
-    width: 100%; height: 110px; position: relative; overflow: hidden; flex-shrink: 0;
+    width: 100%; height: 155px; position: relative; overflow: hidden; flex-shrink: 0;
     background: linear-gradient(135deg, #0f0f16 0%, #1a1520 40%, #0f1318 100%);
     display: flex; align-items: center; justify-content: center;
   }
@@ -406,7 +406,7 @@
       <div class="set-item" id="adminMenu" style="display:none" onclick="goAdmin()">
         <span class="set-ico">👥</span>
         <div>
-          <div class="set-lbl">사용자 관리</div>
+          <div class="set-lbl">시스템 설정</div>
           <div class="set-sub">접근 권한 이메일 관리</div>
         </div>
       </div>
@@ -459,6 +459,13 @@ function navigateTo(url) {
   }
 }
 
+// ── 이미지 유효성 검증 함수 ──
+function hasValidImage(url) {
+  if (!url) return false;
+  const u = String(url).trim().toLowerCase();
+  return u !== '' && u !== 'null' && u !== 'undefined' && u !== 'none';
+}
+
 // ── iframe 전용 알림 인터페이스 정의 ───────────────────────
 function showConfirm(msg, onOk) {
   const modal = document.getElementById('customConfirmModal');
@@ -492,6 +499,9 @@ function showAlert(msg, isSuccess = false) {
 let ALL = [], CUR = 'all';
 
 window.addEventListener('load', () => {
+  try {
+    localStorage.setItem("cv_last_view", "mobile"); // [해결] 모바일 모드에서 "mobile" 상태 정상 주입
+  } catch(e) {}
   loadCards();
   google.script.run
     .withSuccessHandler(u => {
@@ -563,38 +573,39 @@ function drawCards(cards) {
   app.innerHTML = '<div class="card-list">' + cards.map(mkCard).join('') + '</div>';
 }
 
+// 기본 플레이스홀더 배너 HTML 반환 (Mobile 용)
+function makeDefaultBannerHTML() {
+  return `
+    <div class="card-banner-default">
+      <div class="default-corner tl"></div>
+      <div class="default-corner tr"></div>
+      <div class="default-corner bl"></div>
+      <div class="default-corner br"></div>
+      <div class="default-inner">
+        <div class="default-monogram">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d4a843" stroke-width="1.2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="default-lines">
+          <div class="default-line"></div>
+          <div class="default-line"></div>
+          <div class="default-line"></div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function mkCard(c) {
-  const defaultBanner =
-    '<div class="card-banner-default">' +
-    '<div class="default-corner tl"></div>' +
-    '<div class="default-corner tr"></div>' +
-    '<div class="default-corner bl"></div>' +
-    '<div class="default-corner br"></div>' +
-    '<div class="default-inner">' +
-    '<div class="default-monogram">' +
-    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d4a843" stroke-width="1.2">' +
-    '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>' +
-    '<circle cx="12" cy="7" r="4"/>' +
-    '</svg>' +
-    '</div>' +
-    '<div class="default-lines">' +
-    '<div class="default-line"></div>' +
-    '<div class="default-line"></div>' +
-    '<div class="default-line"></div>' +
-    '</div>' +
-    '</div>' +
-    '</div>';
-
-  const imgBanner =
-    '<div class="card-banner" id="bn-' + c.index + '">' +
-    '<img src="' + c.imageUrl + '" ' +
-    'onerror="' +
-      'var b=document.getElementById(\'bn-' + c.index + '\');' +
-      'b.outerHTML=\'' + defaultBanner.replace(/'/g, "\\'").replace(/\n/g, '') + '\'' +
-    '">' +
-    '</div>';
-
-  const bannerHTML = c.imageUrl ? imgBanner : defaultBanner;
+  const hasImg = hasValidImage(c.imageUrl);
+  const imgBanner = `
+    <div class="card-banner" id="bn-${c.index}">
+      <img src="${c.imageUrl}" onerror="document.getElementById('bn-${c.index}').innerHTML=makeDefaultBannerHTML()">
+    </div>
+  `;
+  const bannerHTML = hasImg ? imgBanner : makeDefaultBannerHTML();
 
   return (
     '<div class="card" onclick="openDet(' + c.index + ')">' +
@@ -620,14 +631,16 @@ function mkCard(c) {
 /* ── 상세 ── */
 function openDet(idx) {
   const c = ALL.find(x => x.index === idx); if (!c) return;
+  const hasImg = hasValidImage(c.imageUrl);
+  const imgTag = hasImg ? `<img src="${c.imageUrl}" onerror="this.parentElement.innerHTML=makeDefaultBannerHTML()">` : '';
+  const mediaContainer = hasImg ? `<div class="det-img">${imgTag}</div>` : makeDefaultBannerHTML();
+
   document.getElementById('detContent').innerHTML =
     '<div class="sh-head">' +
     '<span class="sh-title">' + esc(c.name || '상세') + '</span>' +
     '<button class="sh-x" onclick="closeOvl(\'detOvl\')">×</button>' +
     '</div>' +
-    '<div class="det-img' + (c.imageUrl ? '' : ' empty') + '">' +
-    (c.imageUrl ? '<img src="' + c.imageUrl + '" onerror="this.parentElement.classList.add(\'empty\')">' : '') +
-    '</div>' +
+    mediaContainer +
     '<div class="det-body">' +
     '<div class="det-name">' + esc(c.name || '이름 없음') + '</div>' +
     '<div class="det-co">' + esc(c.company || '') + '</div>' +
@@ -715,7 +728,10 @@ function goAdmin() {
   navigateTo(SCRIPT_URL + '?page=admin');
 }
 function goDesktop() {
-  try { localStorage.setItem("cv_manual_view", "desktop"); } catch(e){}
+  try { 
+    localStorage.setItem("cv_manual_view", "desktop"); 
+    localStorage.setItem("cv_last_view", "desktop");
+  } catch(e){}
   navigateTo(SCRIPT_URL + '?v=desktop');
 }
 
