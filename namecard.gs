@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// namecard.gs — 스크립트 속성 동적 로드 및 안정성 보완
+// namecard.gs — 다중 명함 일괄 검출 및 동적 적재 고도화
 // ══════════════════════════════════════════════
 
 /**
@@ -9,12 +9,12 @@
 function getActiveConfig() {
   var props = PropertiesService.getScriptProperties().getProperties();
   return {
-    FOLDER_NAME: props.FOLDER_NAME || 'Namecard_Images',
-    DONE_FOLDER: props.DONE_FOLDER || 'Namecard_Done',
+    FOLDER_NAME: (props.FOLDER_NAME || 'Namecard_Images').trim(),
+    DONE_FOLDER: (props.DONE_FOLDER || 'Namecard_Done').trim(),
     SHEET_NAME: 'db_namecards',
     LOG_SHEET: 'processed_log',
-    GEMINI_MODEL: props.GEMINI_MODEL || 'gemini-3.1-flash-lite',
-    GEMINI_API_KEY: props.GEMINI_API_KEY || ''
+    GEMINI_MODEL: (props.GEMINI_MODEL || 'gemini-3.1-flash-lite').trim(),
+    GEMINI_API_KEY: (props.GEMINI_API_KEY || '').trim()
   };
 }
 
@@ -63,7 +63,7 @@ function scanNewNamecards() {
   }
 }
 
-// ── 단일 이미지 트랜잭션 처리 ───────────────────────
+// ── 단일 이미지 내 다중 명함 처리 트랜잭션 ───────────────────
 function processSingleFile(file, logSheet) {
   var config = getActiveConfig();
   if (!config.GEMINI_API_KEY) {
@@ -73,44 +73,66 @@ function processSingleFile(file, logSheet) {
   var fileId = file.getId();
   var blob = file.getBlob();
   var base64Data = Utilities.base64Encode(blob.getBytes());
-  var mimeType = blob.ContentType;
+  
+  // 구글 드라이브 네이티브 MIME 타입 및 Fallback 가드
+  var mimeType = file.getMimeType() || blob.getContentType() || 'image/jpeg';
 
-  // 1. Gemini AI Vision OCR 파싱 통신
+  // 1. Gemini AI Vision OCR 파싱 통신 (다중 명함 감지형 배열 수신)
   var rawJson = callGeminiVision(base64Data, mimeType);
-  var cardData = parseGeminiOutput(rawJson);
+  var cardsList = parseGeminiOutput(rawJson);
+
+  Logger.log('📊 이미지 내 검출된 명함 개수: ' + cardsList.length + '장');
 
   // 2. 구글 드라이브 내 완료 격리 폴더로 안전 이동
   var viewUrl = file.getUrl();
   moveFileToDoneFolder(file);
 
-  // 3. 스프레드시트 데이터 적재 및 UPSERT 수정 기입
-  saveOrUpdateNamecard(cardData, viewUrl);
+  // 3. 스프레드시트 데이터 적재 및 UPSERT 수정 기입 (다중 명함 반복 루프)
+  for (var i = 0; i < cardsList.length; i++) {
+    var card = cardsList[i];
+    // 필수 데이터 유효성 최소 검증 (이름이나 회사명이 존재할 때만 기입)
+    if (card.name || card.company) {
+      saveOrUpdateNamecard(card, viewUrl);
+    }
+  }
 
   // 4. 스캔 로그 최종 커밋 기록
   logSheet.appendRow([fileId, new Date().toISOString()]);
 }
 
-// ── Gemini API 통신 파트 ──────────────────────────
+// ── Gemini API 통신 파트 (다중 명함 지시어 설계) ──────────────────────────
 function callGeminiVision(base64Data, mimeType) {
   var config = getActiveConfig();
-  var url = '[https://generativelanguage.googleapis.com/v1beta/models/](https://generativelanguage.googleapis.com/v1beta/models/)' + config.GEMINI_MODEL + ':generateContent?key=' + config.GEMINI_API_KEY;
+  
+  var cleanKey = encodeURIComponent(config.GEMINI_API_KEY.replace(/[\s\t\r\n]/g, ''));
+  var cleanModel = encodeURIComponent(config.GEMINI_MODEL.replace(/[\s\t\r\n]/g, ''));
+  
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + cleanModel + ':generateContent?key=' + cleanKey;
 
+  // 다중 명함의 정형화된 JSON 배열 출력을 보장하는 고급 시스템 지시어
   var systemInstruction = 
-    "You are a professional Business Card OCR parser. " +
-    "Extract the information from the business card image and return ONLY a valid JSON object. " +
-    "DO NOT warp the JSON in markdown blocks like ```json ... ```. " +
+    "You are a professional Business Card OCR parser specialized in multi-object detection. " +
+    "Analyze the image and locate ALL distinct business cards present in the image (there could be one, two, or multiple cards in a single photo). " +
+    "Extract the information from EACH identified business card and return a single valid JSON object containing an array of cards. " +
+    "DO NOT wrap the JSON in markdown blocks like ```json ... ```. " +
     "Return the raw JSON string directly. Use the exact JSON format below:\n" +
     "{\n" +
-    "  \"company\": \"Company name or organization\",\n" +
-    "  \"name\": \"Person's name\",\n" +
-    "  \"title\": \"Job title or position\",\n" +
-    "  \"phone\": \"Office/Representative phone number\",\n" +
-    "  \"mobile\": \"Personal mobile phone number\",\n" +
-    "  \"email\": \"Email address\",\n" +
-    "  \"address\": \"Full office address\"\n" +
+    "  \"cards\": [\n" +
+    "    {\n" +
+    "      \"company\": \"Company name or organization\",\n" +
+    "      \"name\": \"Person's name\",\n" +
+    "      \"title\": \"Job title or position\",\n" +
+    "      \"phone\": \"Office/Representative phone number\",\n" +
+    "      \"mobile\": \"Personal mobile phone number\",\n" +
+    "      \"email\": \"Email address\",\n" +
+    "      \"address\": \"Full office address\"\n" +
+    "    }\n" +
+    "  ]\n" +
     "}\n" +
     "Rules:\n" +
-    "- If a field is not found, use an empty string.\n" +
+    "- Detect every single card. Do not omit any cards in the photo.\n" +
+    "- If both Korean (한글) and English (영문) are present on a card (e.g. bilingual card or two-sided text), always prioritize extracting the Korean (한글) values for company, name, title, and address.\n" +
+    "- If a field is not found on a card, use an empty string.\n" +
     "- Clean and format phone/mobile numbers (e.g., 010-1234-5678, 02-123-4567).\n" +
     "- Remove any prefix labels (like Tel, HP, Email, Fax, Addr, 주소, 전화) from the extracted field values.";
 
@@ -118,7 +140,7 @@ function callGeminiVision(base64Data, mimeType) {
     contents: [
       {
         parts: [
-          { text: "Extract the data from this business card." },
+          { text: "Locate and extract all distinct business cards from this image." },
           {
             inlineData: {
               mimeType: mimeType,
@@ -142,38 +164,58 @@ function callGeminiVision(base64Data, mimeType) {
     muteHttpExceptions: true
   };
 
-  // 지수 백오프 기반 네트워크 안정 기동 처리
-  var response, responseCode;
+  var response = null;
+  var responseCode = null;
+  var lastError = null;
+
   for (var i = 0; i < 3; i++) {
     try {
       response = UrlFetchApp.fetch(url, options);
       responseCode = response.getResponseCode();
-      if (responseCode === 200) break;
+      if (responseCode === 200) {
+        lastError = null;
+        break;
+      } else {
+        lastError = new Error('HTTP Status ' + responseCode + ': ' + response.getContentText());
+      }
     } catch (err) {
-      Logger.log('🌐 API 서버 지연 감지, 네트워크 재조율 기동 (' + (i+1) + '/3)');
+      lastError = err;
+      Logger.log('🌐 API 서버 지연 감지, 네트워크 재조율 기동 (' + (i+1) + '/3) | 에러내용: ' + err.toString());
     }
     Utilities.sleep(Math.pow(2, i) * 1000);
   }
 
-  if (!response || responseCode !== 200) {
-    var errMsg = response ? response.getContentText() : '네트워크 연동 실패';
-    throw new Error('Gemini 연동 중 예외가 발생했습니다 (HTTP ' + responseCode + '): ' + errMsg);
+  if (responseCode !== 200) {
+    var detailMsg = lastError ? lastError.toString() : '알 수 없는 네트워크 연동 오류';
+    throw new Error('Gemini 연동 중 예외가 발생했습니다 (HTTP ' + (responseCode || 'undefined') + '): ' + detailMsg);
   }
 
   return response.getContentText();
 }
 
+/**
+ * Gemini 결과물에서 다중 명함 리스트(Array)를 무결하게 파싱하여 반환하는 래퍼 함수
+ */
 function parseGeminiOutput(responseText) {
   try {
     var res = JSON.parse(responseText);
     var textOutput = res.candidates[0].content.parts[0].text;
     
-    // Markdown 가드 및 Backtick 문자열 정교하게 전처리 및 파싱
+    // Markdown 코드 블록 정제
     textOutput = textOutput.replace(/```json/g, '').replace(/```/g, '').trim();
     
-    return JSON.parse(textOutput);
+    var parsed = JSON.parse(textOutput);
+    
+    // 다중 명함 스키마 규격 검증 및 포맷 일반화
+    if (parsed.cards && Array.isArray(parsed.cards)) {
+      return parsed.cards;
+    } else if (Array.isArray(parsed)) {
+      return parsed;
+    } else {
+      return [parsed]; // 싱글 명함으로 오반환 시 배열로 자동 승격 보정
+    }
   } catch (e) {
-    throw new Error('JSON 변환 중 형식 불일치 오류가 나타났습니다: ' + e.toString());
+    throw new Error('JSON 변환 중 형식 불일치 오류가 나타났습니다: ' + e.toString() + ' | Raw: ' + responseText);
   }
 }
 
@@ -186,43 +228,83 @@ function saveOrUpdateNamecard(card, imageUrl) {
 
   var data = sheet.getDataRange().getValues();
   var matchRowIndex = -1;
+  var isCareerChange = false;
+  var oldCompany = '';
+  var oldTitle = '';
 
-  // 이메일, 모바일 번호, 사무실 유선번호 비교를 통한 중복 UPSERT 판단
+  var targetName = card.name ? String(card.name).trim() : '';
+  var targetPhone = card.phone ? String(card.phone).replace(/[^0-9]/g, '') : '';
+  var targetMobile = card.mobile ? String(card.mobile).replace(/[^0-9]/g, '') : '';
+  var targetEmail = card.email ? String(card.email).trim().toLowerCase() : '';
+  var targetCompany = card.company ? String(card.company).trim() : '';
+
+  // 이메일, 모바일 번호, 사무실 유선번호 비교를 통한 중복 및 이직 여부 결정
   for (var i = 1; i < data.length; i++) {
-    var existingPhone  = String(data[i][5]).replace(/[^0-9]/g, '');
-    var existingMobile = String(data[i][6]).replace(/[^0-9]/g, '');
-    var existingEmail  = String(data[i][7]).trim().toLowerCase();
+    var existingCompany = String(data[i][2]).trim();
+    var existingName    = String(data[i][3]).trim();
+    var existingTitle   = String(data[i][4]).trim();
+    var existingPhone   = String(data[i][5]).replace(/[^0-9]/g, '');
+    var existingMobile  = String(data[i][6]).replace(/[^0-9]/g, '');
+    var existingEmail   = String(data[i][7]).trim().toLowerCase();
 
-    var targetPhone  = card.phone ? String(card.phone).replace(/[^0-9]/g, '') : '';
-    var targetMobile = card.mobile ? String(card.mobile).replace(/[^0-9]/g, '') : '';
-    var targetEmail  = card.email ? String(card.email).trim().toLowerCase() : '';
+    // 1. 이직(Career Change) 여부 최우선 판별: 동일인(이름+휴대폰 일치)이나 소속 회사가 달라진 경우
+    if (targetName && targetMobile && targetName === existingName && targetMobile === existingMobile) {
+      if (targetCompany && targetCompany !== existingCompany) {
+        matchRowIndex = i + 1; // 1-based Index 보정
+        isCareerChange = true;
+        oldCompany = existingCompany;
+        oldTitle = existingTitle;
+        break;
+      }
+    }
 
-    var isMatch = false;
-    if (targetEmail && targetEmail === existingEmail) isMatch = true;
-    else if (targetMobile && targetMobile === existingMobile) isMatch = true;
-    else if (targetPhone && targetPhone === existingPhone) isMatch = true;
+    // 2. 일반적인 정보 업데이트 매칭 (동일인 정보 최신화)
+    var isNormalMatch = false;
+    if (targetEmail && targetEmail === existingEmail) isNormalMatch = true;
+    else if (targetMobile && targetMobile === existingMobile) isNormalMatch = true;
+    else if (targetPhone && targetPhone === existingPhone) isNormalMatch = true;
 
-    if (isMatch) {
+    if (isNormalMatch) {
       matchRowIndex = i + 1;
       break;
     }
   }
 
   if (matchRowIndex !== -1) {
-    // 중복 레코드: UPDATE
-    sheet.getRange(matchRowIndex, 2, 1, 10).setValues([[
-      new Date().toISOString(),
-      card.company || '',
-      card.name || '',
-      card.title || '',
-      card.phone || '',
-      card.mobile || '',
-      card.email || '',
-      card.address || '',
-      imageUrl,
-      'UPDATED'
-    ]]);
-    Logger.log('🔄 기존 레코드를 발견하여 명함 데이터를 무결하게 갱신했습니다 (행 번호: ' + matchRowIndex + ')');
+    if (isCareerChange) {
+      // 이직 이력 보존 처리 (db_careers 시트에 기록 적재)
+      recordCareerHistory(targetName, card.mobile, oldCompany, oldTitle, targetCompany, card.title);
+
+      // 메인 DB 레코드의 회사 소속 정보 등을 신규로 완전히 덮어쓰기 (상태: CAREER_CHANGED)
+      sheet.getRange(matchRowIndex, 2, 1, 10).setValues([[
+        new Date().toISOString(),
+        card.company || '',
+        card.name || '',
+        card.title || '',
+        card.phone || '',
+        card.mobile || '',
+        card.email || '',
+        card.address || '',
+        imageUrl,
+        'CAREER_CHANGED'
+      ]]);
+      Logger.log('🔄 이직 감지 및 이력 기록 완료: ' + targetName + ' (' + oldCompany + ' ➔ ' + targetCompany + ')');
+    } else {
+      // 일반 레코드: UPDATE
+      sheet.getRange(matchRowIndex, 2, 1, 10).setValues([[
+        new Date().toISOString(),
+        card.company || '',
+        card.name || '',
+        card.title || '',
+        card.phone || '',
+        card.mobile || '',
+        card.email || '',
+        card.address || '',
+        imageUrl,
+        'UPDATED'
+      ]]);
+      Logger.log('🔄 기존 레코드를 발견하여 명함 데이터를 무결하게 갱신했습니다 (행 번호: ' + matchRowIndex + ')');
+    }
   } else {
     // 고유 레코드: INSERT
     var uuid = Utilities.getUuid();
@@ -239,8 +321,38 @@ function saveOrUpdateNamecard(card, imageUrl) {
       imageUrl,
       'OK'
     ]);
-    Logger.log('✨ 새로운 고유 연락처 데이터를 데이터베이스에 적재했습니다.');
+    Logger.log('✨ 새 고유 데이터베이스 적재 완료: ' + targetName);
   }
+}
+
+/**
+ * 인물의 이직 이력을 연대기 순으로 영구 기록하는 감사 보조 테이블 제어 함수
+ */
+function recordCareerHistory(name, mobile, oldCompany, oldTitle, newCompany, newTitle) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var careerSheetName = 'db_careers';
+  var sheet = ss.getSheetByName(careerSheetName);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(careerSheetName);
+    sheet.appendRow(['이름', '휴대폰', '이전 회사', '이전 직책', '신규 회사', '신규 직책', '이직 기록 일시']);
+    sheet.getRange(1, 1, 1, 7)
+         .setFontWeight('bold')
+         .setBackground('#111116')
+         .setFontColor('#c9a84c')
+         .setHorizontalAlignment('center');
+    sheet.setFrozenRows(1);
+  }
+  
+  sheet.appendRow([
+    name,
+    mobile,
+    oldCompany || '(정보 없음)',
+    oldTitle || '(정보 없음)',
+    newCompany || '(정보 없음)',
+    newTitle || '(정보 없음)',
+    new Date().toISOString()
+  ]);
 }
 
 // ── 드라이브 파일 이동 처리 ───────────────────────
@@ -252,7 +364,6 @@ function moveFileToDoneFolder(file) {
     doneFolder = parentFolder.createFolder(config.DONE_FOLDER);
   }
   
-  // 구형 Google Drive API를 최신 moveTo 표준 규격으로 업그레이드 (중복/단축키 결함 해결)
   file.moveTo(doneFolder);
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   Logger.log('📦 명함 이미지 파일 격리 격하 이송 완료: ' + file.getName());
