@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════
-// webapp.gs — 최적화 라우팅 및 기기 격리 적용
+// webapp.gs — 서버 템플릿 기반 실시간 가상 라우팅 도입
 // ══════════════════════════════════════════════
 
 // ── 인증 확인 및 다이내믹 라우팅 ────────────────
@@ -11,39 +11,56 @@ function doGet(e) {
     var authUrl = 'https://accounts.google.com/ServiceLogin?continue=' +
       encodeURIComponent(scriptUrl);
     return HtmlService.createHtmlOutput(buildLoginPage(authUrl))
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
   var role = getUserRole(user);
   if (!role) {
     return HtmlService.createHtmlOutput(buildDeniedPage(user))
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
   var param = e && e.parameter ? e.parameter : {};
 
-  // 1. 관리자 전용 페이지 라우팅
-  if (param.page === 'admin' && role === 'admin') {
-    return HtmlService.createHtmlOutputFromFile('admin')
-      .setTitle('CardVault Pro — 사용자 관리')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // 1. 관리자 전용 페이지 라우팅 (템플릿 엔진을 통해 canonical URL 전달)
+  if (param.page === 'admin') {
+    if (role === 'admin') {
+      var template = HtmlService.createTemplateFromFile('admin');
+      template.scriptUrl = scriptUrl; // 템플릿 변수 바인딩
+      return template.evaluate()
+        .setTitle('CardVault Pro — 사용자 관리')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+        .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+    } else {
+      return HtmlService.createHtmlOutput(buildDeniedPage(user))
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
   }
 
   // 2. 명시적 기기 뷰 파라미터가 있을 경우 세션 렌더링
   if (param.v === 'mobile') {
-    return HtmlService.createHtmlOutputFromFile('mobile')
+    var template = HtmlService.createTemplateFromFile('mobile');
+    template.scriptUrl = scriptUrl;
+    return template.evaluate()
       .setTitle('CardVault Pro (Mobile)')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
   if (param.v === 'desktop') {
-    return HtmlService.createHtmlOutputFromFile('index')
+    var template = HtmlService.createTemplateFromFile('index');
+    template.scriptUrl = scriptUrl;
+    return template.evaluate()
       .setTitle('CardVault Pro (Desktop)')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
   }
 
   // 3. 무조건적 라우터 페이지 전달 (로컬 클라이언트 상태 진단용)
   return HtmlService.createHtmlOutput(buildRouterPage(scriptUrl))
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
 // ── 최적화 디바이스 분석기 빌더 ─────────────────────
@@ -248,7 +265,7 @@ function updateNamecard(rowIndex, data) {
 function uploadToDrive(base64Data, mimeType, fileName) {
   var cur = getCurrentUser();
   if (!cur.role) throw new Error('권한 없음');
-  var config = getActiveConfig(); // 동적 속성 로드 함수로 대체하여 버그 해결
+  var config = getActiveConfig();
   var folder = getDriveFolder(config.FOLDER_NAME);
   if (!folder) throw new Error(config.FOLDER_NAME + ' 폴더를 찾을 수 없습니다');
   var blob = Utilities.newBlob(Utilities.base64Decode(base64Data), mimeType, fileName);
