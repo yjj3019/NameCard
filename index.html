@@ -4,258 +4,148 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CardVault Pro — Desktop</title>
-<link href="[https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap](https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap)" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<!-- Chart.js 삽입 -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  :root {
-    --bg:       #0a0a0c;
-    --surface:  #111116;
-    --card:     #17171e;
-    --card2:    #1c1c25;
-    --border:   rgba(255,255,255,.07);
-    --gold:     #c9a84c;
-    --gold-dim: rgba(201,168,76,.12);
-    --gold-glow:rgba(201,168,76,.2);
-    --text:     #f0ede8;
-    --muted:    #5e5b55;
-    --sub:      #9e9a92;
-    --danger:   #e05555;
-  }
-
+  :root { --bg: #0a0a0c; --surface: #111116; --card: #17171e; --card2: #1c1c25; --border: rgba(255,255,255,.07); --gold: #c9a84c; --gold-dim: rgba(201,168,76,.12); --text: #f0ede8; --muted: #5e5b55; --sub: #9e9a92; --danger: #e05555; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'DM Sans', 'Noto Sans KR', sans-serif;
-    background: var(--bg); color: var(--text);
-    min-height: 100vh; overflow-x: hidden;
-  }
+  body { font-family: 'DM Sans', 'Noto Sans KR', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+  body::before { content: ''; position: fixed; top: -300px; left: -200px; width: 800px; height: 800px; background: radial-gradient(circle, rgba(201,168,76,.03) 0%, transparent 65%); pointer-events: none; z-index: 0; }
 
-  body::before {
-    content: '';
-    position: fixed; top: -300px; left: -200px;
-    width: 800px; height: 800px;
-    background: radial-gradient(circle, rgba(201,168,76,.03) 0%, transparent 65%);
-    pointer-events: none; z-index: 0;
-  }
-
-  /* ── Header ── */
-  header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,12,.92);
-    backdrop-filter: blur(20px) saturate(180%);
-    border-bottom: 1px solid var(--border);
-    padding: 0 32px;
-    display: flex; align-items: center; gap: 20px; height: 64px;
-  }
-
+  header { position: sticky; top: 0; z-index: 100; background: rgba(10,10,12,.92); backdrop-filter: blur(20px) saturate(180%); border-bottom: 1px solid var(--border); padding: 0 32px; display: flex; align-items: center; gap: 20px; height: 64px; }
   .logo { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
-  .logo-text {
-    font-family: 'DM Serif Display', serif; font-size: 22px;
-    background: linear-gradient(135deg, #f0ede8 30%, var(--gold));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .logo-badge {
-    font-size: 9px; color: var(--gold); letter-spacing: 2px;
-    text-transform: uppercase; font-weight: 600;
-    border: 1px solid rgba(201,168,76,.3); border-radius: 4px; padding: 2px 6px;
-  }
+  .logo-text { font-family: 'DM Serif Display', serif; font-size: 22px; background: linear-gradient(135deg, #f0ede8 30%, var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .logo-badge { font-size: 9px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; border: 1px solid rgba(201,168,76,.3); border-radius: 4px; padding: 2px 6px; }
 
   .search-wrap { flex: 1; max-width: 420px; position: relative; }
-  .search-wrap input {
-    width: 100%; background: rgba(255,255,255,.04); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 16px 10px 42px;
-    color: var(--text); font-size: 14px; font-family: inherit; outline: none;
-    transition: border-color .25s, background .25s;
-  }
-  .search-wrap input::placeholder { color: var(--muted); }
+  .search-wrap input { width: 100%; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 16px 10px 42px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color .25s, background .25s; }
   .search-wrap input:focus { border-color: rgba(201,168,76,.4); background: rgba(201,168,76,.04); }
   .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--muted); }
-
   .header-right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
-  .stat { font-size: 13px; color: var(--muted); }
-  .stat b { color: var(--gold); }
-
+  .stat { font-size: 13px; color: var(--muted); } .stat b { color: var(--gold); }
   .sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--gold); opacity: .5; transition: opacity .3s; }
   .sync-dot.active { opacity: 1; animation: pulse 1s ease infinite; }
   @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.4)} }
 
-  /* ── Layout ── */
   .layout { display: flex; min-height: calc(100vh - 64px); position: relative; z-index: 1; }
-
-  /* ── Sidebar ── */
-  .sidebar {
-    width: 240px; flex-shrink: 0; border-right: 1px solid var(--border);
-    padding: 24px 16px; display: flex; flex-direction: column; gap: 6px;
-    position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto;
-  }
+  .sidebar { width: 240px; flex-shrink: 0; border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; gap: 6px; position: sticky; top: 64px; height: calc(100vh - 64px); overflow-y: auto; }
   .sidebar-section { font-size: 10px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 12px 8px; margin-top: 8px; }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-    border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500;
-    color: var(--muted); border: none; background: transparent;
-    width: 100%; font-family: inherit; text-align: left; transition: background .15s, color .15s;
-  }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); border: none; background: transparent; width: 100%; font-family: inherit; text-align: left; transition: background .15s, color .15s; }
   .nav-item:hover { background: rgba(255,255,255,.04); color: var(--sub); }
   .nav-item.active { background: var(--gold-dim); color: var(--gold); }
-  .nav-item .ni { font-size: 16px; }
+  .sidebar-cam { margin-top: auto; background: linear-gradient(135deg, #c9a84c, #9a7530); color: #0a0a0c; border: none; border-radius: 12px; padding: 13px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity .15s; }
 
-  .sidebar-cam {
-    margin-top: auto; background: linear-gradient(135deg, #c9a84c, #9a7530);
-    color: #0a0a0c; border: none; border-radius: 12px;
-    padding: 13px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
-    display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: .3px; transition: opacity .15s;
-  }
-  .sidebar-cam:hover { opacity: .88; }
+  .main { flex: 1; padding: 28px; overflow: hidden; display: flex; flex-direction: column; }
+  
+  /* ── 초성 필터 UI ── */
+  .consonant-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .consonant-bar::-webkit-scrollbar { height: 4px; }
+  .consonant-bar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+  .c-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: transparent; color: var(--sub); cursor: pointer; transition: all 0.2s; font-family: 'Noto Sans KR', sans-serif;}
+  .c-btn:hover { border-color: rgba(201,168,76,.4); color: var(--text); }
+  .c-btn.on { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
 
-  /* ── Main ── */
-  .main { flex: 1; padding: 28px; overflow: hidden; }
   .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
   .section-title { font-family: 'DM Serif Display', serif; font-size: 24px; }
-  .section-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .section-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; padding-bottom: 40px; }
 
-  /* ── Grid ── */
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  /* Skeleton Loading */
+  .skeleton { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; position: relative; height: 260px; }
+  .skeleton::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent); animation: shimmer 1.5s infinite; }
+  @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+  .sk-img { width: 100%; height: 144px; background: rgba(255,255,255,0.02); }
+  .sk-body { padding: 14px 16px; }
+  .sk-line { height: 12px; background: rgba(255,255,255,0.04); border-radius: 4px; margin-bottom: 8px; }
 
-  /* ── Card ── */
-  .card {
-    background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; cursor: pointer;
-    position: relative; transition: transform .2s, box-shadow .2s, border-color .2s;
-    animation: cardIn .4s ease both;
-  }
-  .card::before { content: ''; position: absolute; inset: 0; background: linear-gradient(160deg, rgba(201,168,76,.02) 0%, transparent 50%); pointer-events: none; }
+  /* Card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; cursor: pointer; position: relative; transition: transform .2s, box-shadow .2s; animation: cardIn .4s ease both; }
   @keyframes cardIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
   .card:hover { transform: translateY(-4px); box-shadow: 0 16px 48px rgba(0,0,0,.4), 0 0 0 1px rgba(201,168,76,.15); border-color: rgba(201,168,76,.2); }
-
-  .card-img {
-    width: 100%; height: 144px; background: linear-gradient(160deg, #1c1c26, #141418);
-    display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
-  }
-  .card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .card-img { width: 100%; height: 144px; background: linear-gradient(160deg, #1c1c26, #141418); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .card-img img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.4s ease; }
+  .card-img img.loaded { opacity: 1; }
   .card-img::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40px; background: linear-gradient(transparent, rgba(10,10,12,.6)); }
-  .card-img.no-img::before {
-    content: ''; width: 48px; height: 48px; border: 1px solid rgba(201,168,76,.2); border-radius: 50%;
-    background: url("data:image/svg+xml,%3Csvg xmlns='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)' viewBox='0 0 24 24' fill='none' stroke='%23c9a84c' stroke-width='1.2'%3E%3Cpath d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2'/%3E%3Ccircle cx='12' cy='7' r='4'/%3E%3C/svg%3E") center/26px no-repeat; opacity: .3;
-  }
+  
+  .status-badge { position: absolute; top: 12px; left: 12px; font-size: 9px; font-weight: 700; padding: 3px 8px; border-radius: 10px; letter-spacing: 1px; z-index: 5;}
+  .badge-new { background: rgba(74,222,128,.15); color: #4ade80; border: 1px solid rgba(74,222,128,.3); }
+  .badge-change { background: rgba(139,92,246,.15); color: #a78bfa; border: 1px solid rgba(139,92,246,.3); }
+  .badge-update { background: rgba(96,165,250,.15); color: #60a5fa; border: 1px solid rgba(96,165,250,.3); }
 
-  /* Default Image Styles (Desktop) */
-  .card-banner-default {
-    width: 100%; height: 144px; position: relative; overflow: hidden; flex-shrink: 0;
-    background: linear-gradient(135deg, #0f0f16 0%, #1a1520 40%, #0f1318 100%);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .card-banner-default::before {
-    content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse 60% 80% at 15% 50%, rgba(212,168,67,.06) 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 85% 50%, rgba(212,168,67,.04) 0%, transparent 70%);
-  }
-  .card-banner-default::after {
-    content: ''; position: absolute; left: 16px; right: 16px; top: 50%; height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(212,168,67,.2), rgba(212,168,67,.4), rgba(212,168,67,.2), transparent);
-  }
+  .card-banner-default { width: 100%; height: 144px; position: relative; overflow: hidden; background: linear-gradient(135deg, #0f0f16 0%, #1a1520 40%, #0f1318 100%); display: flex; align-items: center; justify-content: center; }
+  .card-banner-default::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 80% at 15% 50%, rgba(212,168,67,.06) 0%, transparent 70%), radial-gradient(ellipse 40% 60% at 85% 50%, rgba(212,168,67,.04) 0%, transparent 70%); }
+  .card-banner-default::after { content: ''; position: absolute; left: 16px; right: 16px; top: 50%; height: 1px; background: linear-gradient(90deg, transparent, rgba(212,168,67,.2), rgba(212,168,67,.4), rgba(212,168,67,.2), transparent); }
   .default-inner { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; padding: 0 20px; width: 100%; }
-  .default-monogram {
-    width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; background: rgba(212,168,67,.08);
-    border: 1px solid rgba(212,168,67,.2); display: flex; align-items: center; justify-content: center;
-  }
+  .default-monogram { width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0; background: rgba(212,168,67,.08); border: 1px solid rgba(212,168,67,.2); display: flex; align-items: center; justify-content: center; }
   .default-monogram svg { opacity: .5; }
   .default-lines { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .default-line { height: 5px; border-radius: 3px; background: rgba(212,168,67,.1); }
-  .default-line:nth-child(1) { width: 65%; }
-  .default-line:nth-child(2) { width: 45%; }
-  .default-line:nth-child(3) { width: 55%; height: 3px; background: rgba(212,168,67,.06); }
-  .default-corner { position: absolute; width: 12px; height: 12px; border-color: rgba(212,168,67,.2); border-style: solid; }
-  .default-corner.tl { top: 10px; left: 10px; border-width: 1px 0 0 1px; border-radius: 2px 0 0 0; }
-  .default-corner.tr { top: 10px; right: 10px; border-width: 1px 1px 0 0; border-radius: 0 2px 0 0; }
-  .default-corner.bl { bottom: 10px; left: 10px; border-width: 0 0 1px 1px; border-radius: 0 0 0 2px; }
-  .default-corner.br { bottom: 10px; right: 10px; border-width: 0 1px 1px 0; border-radius: 0 0 2px 0; }
+  .default-line:nth-child(1) { width: 65%; } .default-line:nth-child(2) { width: 45%; } .default-line:nth-child(3) { width: 55%; height: 3px; background: rgba(212,168,67,.06); }
 
   .card-body { padding: 14px 16px 16px; }
   .card-name { font-family: 'DM Serif Display', serif; font-size: 18px; letter-spacing: -.2px; margin-bottom: 3px; }
   .card-company { font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; margin-bottom: 2px; }
   .card-title   { font-size: 11px; color: var(--muted); margin-bottom: 12px; }
   .card-contacts { display: flex; flex-direction: column; gap: 4px; }
-  .card-contact { font-size: 11px; color: var(--sub); text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .15s; }
-  .card-contact:hover { color: var(--text); }
-
-  .card-menu { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; }
+  .card-contact { font-size: 11px; color: var(--sub); display: flex; align-items: center; gap: 6px; }
+  .card-menu { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; opacity: 0; transition: opacity .2s; z-index:10; }
   .card:hover .card-menu { opacity: 1; }
-  .card-btn {
-    width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border);
-    cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(8px); transition: all .15s;
-  }
+  .card-btn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(8px); }
   .card-btn-edit { background: rgba(201,168,76,.12); color: var(--gold); }
-  .card-btn-edit:hover { background: rgba(201,168,76,.25); }
   .card-btn-del  { background: rgba(224,85,85,.1); color: var(--danger); }
-  .card-btn-del:hover  { background: rgba(224,85,85,.25); }
 
-  /* ── Modal ── */
-  .modal-bg {
-    display: none; position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,.75); backdrop-filter: blur(8px);
-    align-items: center; justify-content: center; padding: 24px;
-  }
+  /* Modal */
+  .modal-bg { display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,.75); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 24px; }
   .modal-bg.open { display: flex; }
-  .modal {
-    background: var(--surface); border: 1px solid var(--border); border-radius: 24px; width: 100%; max-width: 500px;
-    max-height: 88vh; overflow-y: auto; animation: modalIn .25s cubic-bezier(.32,.72,0,1);
-  }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; width: 100%; max-width: 500px; max-height: 88vh; overflow-y: auto; animation: modalIn .25s cubic-bezier(.32,.72,0,1); }
   @keyframes modalIn { from{opacity:0;transform:scale(.96)translateY(8px)} to{opacity:1;transform:none} }
-
   .modal-header { padding: 24px 26px 0; display: flex; justify-content: space-between; align-items: center; }
   .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; }
-  .modal-close {
-    width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid var(--border);
-    color: var(--muted); cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; transition: background .15s;
-  }
-  .modal-close:hover { background: rgba(255,255,255,.12); }
+  .modal-close { width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--muted); cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-  .detail-img {
-    width: calc(100% - 52px); margin: 18px 26px 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border);
-    height: 180px; background: linear-gradient(160deg,#1c1c26,#141418); display: flex; align-items: center; justify-content: center; position: relative;
-  }
-  .detail-img img { width: 100%; height: 100%; object-fit: cover; }
-  .detail-img.no-img-lg::before { content: '🪪'; font-size: 56px; opacity: .2; }
+  /* Chart Dashboard Styles */
+  .stats-modal { max-width: 800px; padding-bottom: 24px; }
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 20px 26px; }
+  .chart-box { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+  .chart-title { font-size: 13px; color: var(--gold); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; width: 100%; text-align: center; }
+  .canvas-wrapper { width: 100%; position: relative; height: 250px; display: flex; justify-content: center; }
 
+  .detail-img { width: calc(100% - 52px); margin: 18px 26px 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); height: 180px; background: linear-gradient(160deg,#1c1c26,#141418); display: flex; align-items: center; justify-content: center; position: relative; }
+  .detail-img img { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.4s ease; }
+  .detail-img img.loaded { opacity: 1; }
   .detail-body { padding: 20px 26px 28px; }
-  .detail-name {
-    font-family: 'DM Serif Display', serif; font-size: 30px; letter-spacing: -.3px; margin-bottom: 5px;
-    background: linear-gradient(135deg, #f0ede8, #c9b99a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
+  .detail-name { font-family: 'DM Serif Display', serif; font-size: 30px; letter-spacing: -.3px; margin-bottom: 5px; background: linear-gradient(135deg, #f0ede8, #c9b99a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .detail-company { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; font-weight: 600; margin-bottom: 3px; }
   .detail-title   { font-size: 13px; color: var(--muted); margin-bottom: 22px; }
-
   .contact-list { display: flex; flex-direction: column; gap: 10px; }
-  .contact-item {
-    display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: rgba(255,255,255,.03); border: 1px solid var(--border);
-    border-radius: 12px; text-decoration: none; color: var(--text); transition: border-color .2s, background .2s;
-  }
-  .contact-item:hover { border-color: rgba(201,168,76,.3); background: var(--gold-dim); }
+  .contact-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 12px; text-decoration: none; color: var(--text); }
   .contact-icon { width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  .contact-icon.ph { background: rgba(74,222,128,.1); }
-  .contact-icon.mb { background: rgba(139,92,246,.1); }
-  .contact-icon.em { background: rgba(96,165,250,.1); }
-  .contact-icon.ad { background: rgba(251,191,36,.1); }
+  .contact-icon.ph { background: rgba(74,222,128,.1); } .contact-icon.mb { background: rgba(139,92,246,.1); }
+  .contact-icon.em { background: rgba(96,165,250,.1); } .contact-icon.ad { background: rgba(251,191,36,.1); }
   .contact-label { font-size: 10px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
   .contact-value { font-size: 14px; font-weight: 500; }
 
-  /* Edit */
+  .timeline-wrap { margin-top: 24px; padding-top: 20px; border-top: 1px dashed var(--border); }
+  .timeline-title { font-size: 11px; color: var(--gold); letter-spacing: 1px; text-transform: uppercase; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+  .timeline { border-left: 2px solid rgba(201,168,76,.2); padding-left: 18px; margin-left: 8px; display: flex; flex-direction: column; gap: 16px; }
+  .timeline-item { position: relative; }
+  .timeline-item::before { content: ''; position: absolute; left: -24px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--surface); border: 2px solid var(--gold); }
+  .tl-date { font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+  .tl-company { font-size: 13px; color: var(--text); font-weight: 500; }
+  .tl-title { font-size: 11px; color: var(--sub); }
+
   .edit-body { padding: 20px 26px 28px; display: flex; flex-direction: column; gap: 14px; }
   .field-group { display: flex; flex-direction: column; gap: 6px; }
   .field-label { font-size: 10px; color: var(--gold); letter-spacing: 1.5px; text-transform: uppercase; font-weight: 600; }
-  .field-input {
-    width: 100%; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 10px;
-    padding: 12px 14px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color .2s;
-  }
-  .field-input:focus { border-color: rgba(201,168,76,.5); }
+  .field-input { width: 100%; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; color: var(--text); font-size: 14px; font-family: inherit; outline: none; }
   .form-actions { display: flex; gap: 10px; margin-top: 4px; }
-  .btn-gold {
-    flex: 1; padding: 13px; background: linear-gradient(135deg, #c9a84c, #9a7530);
-    border: none; border-radius: 10px; color: #0a0a0c; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
-  }
-  .btn-ghost {
-    flex: 1; padding: 13px; background: rgba(255,255,255,.04); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer; font-family: inherit;
-  }
+  .btn-gold { flex: 1; padding: 13px; background: linear-gradient(135deg, #c9a84c, #9a7530); border: none; border-radius: 10px; color: #0a0a0c; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn-ghost { flex: 1; padding: 13px; background: rgba(255,255,255,.04); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 14px; cursor: pointer; }
 
-  /* Camera Modal */
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 24px; text-align: center; gap: 16px; }
+  .empty-icon-wrap { width: 88px; height: 88px; border-radius: 24px; background: rgba(201,168,76,.05); border: 1px solid rgba(201,168,76,.12); display: flex; align-items: center; justify-content: center; font-size: 40px; }
+
   .upload-modal .modal { max-width: 440px; }
   .cam-area { margin: 18px 26px 0; border-radius: 14px; overflow: hidden; background: #000; aspect-ratio: 4/3; position: relative; }
   #camVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -264,16 +154,9 @@
   .cam-guide::before,.cam-guide::after { content:''; position:absolute; width:18px; height:18px; border-color:var(--gold); border-style:solid; }
   .cam-guide::before { top:-1px;left:-1px;border-width:2px 0 0 2px;border-radius:3px 0 0 0; }
   .cam-guide::after  { bottom:-1px;right:-1px;border-width:0 2px 2px 0;border-radius:0 0 3px 0; }
-
   .preview-area { width: calc(100% - 52px); margin: 18px 26px 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--border); }
   .preview-area img { width: 100%; display: block; }
-
   .cam-perm { margin: 18px 26px 0; padding: 24px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 14px; text-align: center; display: none; flex-direction: column; align-items: center; gap: 14px; }
-  .perm-icon { font-size: 44px; }
-  .perm-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
-  .perm-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-  .perm-guide { text-align: left; font-size: 12px; color: var(--sub); background: rgba(255,255,255,.03); border-radius: 10px; padding: 14px 16px; width: 100%; line-height: 2; }
-
   .cam-actions { padding: 16px 26px 26px; display: flex; flex-direction: column; gap: 10px; }
   .cam-row { display: flex; gap: 10px; }
   .progress-track { height: 3px; background: rgba(255,255,255,.06); border-radius: 2px; overflow: hidden; margin: 0 26px 8px; }
@@ -281,360 +164,268 @@
   .upload-msg { text-align: center; font-size: 12px; color: var(--muted); padding: 0 26px 6px; min-height: 18px; }
   .gallery-link { text-align: center; font-size: 12px; color: var(--muted); cursor: pointer; display: block; }
   .gallery-link span { color: var(--gold); text-decoration: underline; text-underline-offset: 2px; }
-
-  /* Empty / Loading */
-  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 24px; text-align: center; gap: 16px; }
-  .empty-icon-wrap { width: 88px; height: 88px; border-radius: 24px; background: rgba(201,168,76,.05); border: 1px solid rgba(201,168,76,.12); display: flex; align-items: center; justify-content: center; font-size: 40px; }
-  .empty-title { font-family: 'DM Serif Display', serif; font-size: 26px; }
-  .empty-sub { font-size: 14px; color: var(--muted); line-height: 1.6; }
-
-  .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; }
-  .loading-ring { width: 36px; height: 36px; border: 2px solid rgba(201,168,76,.15); border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
-  .loading-text { font-size: 11px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; }
-  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="logo">
-    <span class="logo-text">CardVault</span>
-    <span class="logo-badge">PRO</span>
-  </div>
-  <div class="search-wrap">
-    <span class="search-icon">🔍</span>
-    <input type="text" id="searchInput" placeholder="이름, 회사, 번호 검색...">
-  </div>
-  <div class="header-right">
-    <div class="sync-dot" id="syncDot" title="자동 갱신 활성"></div>
-    <div class="stat">총 <b id="totalCount">-</b>장</div>
-  </div>
+  <div class="logo"><span class="logo-text">CardVault</span><span class="logo-badge">PRO</span></div>
+  <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="이름, 회사, 번호 검색..."></div>
+  <div class="header-right"><div class="sync-dot" id="syncDot" title="자동 갱신 활성"></div><div class="stat">총 <b id="totalCount">-</b>장</div></div>
 </header>
 
 <div class="layout">
   <aside class="sidebar">
     <div class="sidebar-section">메뉴</div>
-    <button class="nav-item active" onclick="filterCards('all',this)"><span class="ni">🪪</span> 전체 명함</button>
-    <button class="nav-item" onclick="filterCards('recent',this)"><span class="ni">🕐</span> 최근 7일</button>
-    <button class="sidebar-cam" onclick="openUpload()">📷 명함 촬영 · 추가</button>
+    <button class="nav-item active" onclick="filterCards('all',this)">🪪 전체 명함</button>
+    <button class="nav-item" onclick="filterCards('recent',this)">🕐 최근 7일</button>
+    <button class="nav-item" onclick="openStatsModal()" style="color:var(--gold);">📊 인사이트 통계</button>
     
-    <button class="nav-item" id="adminMenu" onclick="goAdmin()" style="display:none; color:var(--gold);">
-      <span class="ni">👥</span> 시스템 설정
-    </button>
-    <button class="nav-item" onclick="switchToMobile()" style="margin-top:8px;">
-      <span class="ni">📱</span> 모바일 버전
-    </button> 
+    <button class="sidebar-cam" onclick="openModal('uploadModal')" style="margin-top:20px;">📷 명함 촬영 · 추가</button>
+    
+    <button class="nav-item" id="adminMenu" onclick="goAdmin()" style="display:none; color:var(--gold); margin-top:8px;">🛠️ 시스템 관리자 설정</button>
+    <button class="nav-item" onclick="switchToMobile()" style="margin-top:8px;">📱 모바일 버전</button> 
   </aside>
 
   <div class="main">
+    <!-- 초성 필터 UI -->
+    <div class="consonant-bar" id="consonantBar">
+      <button class="c-btn on" onclick="filterByChosung('all', this)">전체</button>
+      <button class="c-btn" onclick="filterByChosung('ㄱ', this)">ㄱ</button>
+      <button class="c-btn" onclick="filterByChosung('ㄴ', this)">ㄴ</button>
+      <button class="c-btn" onclick="filterByChosung('ㄷ', this)">ㄷ</button>
+      <button class="c-btn" onclick="filterByChosung('ㄹ', this)">ㄹ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅁ', this)">ㅁ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅂ', this)">ㅂ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅅ', this)">ㅅ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅇ', this)">ㅇ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅈ', this)">ㅈ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅊ', this)">ㅊ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅋ', this)">ㅋ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅌ', this)">ㅌ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅍ', this)">ㅍ</button>
+      <button class="c-btn" onclick="filterByChosung('ㅎ', this)">ㅎ</button>
+      <button class="c-btn" onclick="filterByChosung('etc', this)">A-Z</button>
+    </div>
+
     <div class="section-header">
       <div>
         <div class="section-title" id="sectionTitle">전체 명함</div>
         <div class="section-sub" id="sectionSub">로딩 중...</div>
       </div>
     </div>
-    <div id="app">
-      <div class="loading-wrap"><div class="loading-ring"></div><div class="loading-text">불러오는 중</div></div>
+    <div id="app"></div> 
+  </div>
+</div>
+
+<div class="modal-bg" id="detailModal"><div class="modal"><div id="detailContent"></div></div></div>
+<div class="modal-bg" id="editModal"><div class="modal"><div id="editContent"></div></div></div>
+
+<!-- 통계(인사이트) 모달 -->
+<div class="modal-bg" id="statsModal">
+  <div class="modal stats-modal">
+    <div class="modal-header"><span class="modal-title">데이터 인사이트</span><button class="modal-close" onclick="closeModal('statsModal')">×</button></div>
+    <div class="charts-grid">
+      <div class="chart-box">
+        <div class="chart-title">주요 성씨 비율 (Top 5)</div>
+        <div class="canvas-wrapper"><canvas id="lastNameChart"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">주요 등록 회사 (Top 5)</div>
+        <div class="canvas-wrapper"><canvas id="companyChart"></canvas></div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- 상세 모달 -->
-<div class="modal-bg" id="detailModal">
-  <div class="modal"><div id="detailContent"></div></div>
-</div>
-
-<!-- 수정 모달 -->
-<div class="modal-bg" id="editModal">
-  <div class="modal"><div id="editContent"></div></div>
-</div>
-
-<!-- 업로드 모달 -->
+<!-- Camera Modal -->
 <div class="modal-bg upload-modal" id="uploadModal">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">명함 촬영</span>
-      <button class="modal-close" onclick="closeUpload()">×</button>
-    </div>
-    <div class="cam-area" id="camWrap">
-      <video id="camVideo" autoplay playsinline></video>
-      <canvas id="camCanvas"></canvas>
-      <div class="cam-guide"></div>
-    </div>
-    <div class="cam-perm" id="camPerm">
-      <div class="perm-icon">📷</div>
-      <div class="perm-title">카메라 권한 필요</div>
-      <div class="perm-desc">명함을 촬영하려면<br>카메라 접근을 허용해주세요</div>
-      <div class="perm-guide" id="permGuide"></div>
-      <button class="btn-gold" onclick="retryCamera()" style="width:100%">다시 시도</button>
-    </div>
+    <div class="modal-header"><span class="modal-title">명함 촬영</span><button class="modal-close" onclick="closeUpload()">×</button></div>
+    <div class="cam-area" id="camWrap"><video id="camVideo" autoplay playsinline></video><canvas id="camCanvas"></canvas><div class="cam-guide"></div></div>
+    <div class="cam-perm" id="camPerm"><div style="font-size:44px;">📷</div><div class="perm-title">카메라 권한 필요</div><div class="perm-guide" id="permGuide"></div><button class="btn-gold" onclick="retryCamera()" style="width:100%">다시 시도</button></div>
     <div class="preview-area" id="previewWrap" style="display:none"><img id="previewImg" src=""></div>
     <div class="progress-track" id="progressTrack" style="display:none"><div class="progress-bar" id="progressBar"></div></div>
     <div class="upload-msg" id="uploadMsg"></div>
     <div class="cam-actions">
-      <div class="cam-row" id="actShoot">
-        <button class="btn-ghost" onclick="switchCamera()" style="flex:.5">🔄 전환</button>
-        <button class="btn-gold" onclick="shoot()">📸 촬영하기</button>
-      </div>
-      <div class="cam-row" id="actConfirm" style="display:none">
-        <button class="btn-ghost" onclick="retake()">🔄 다시 찍기</button>
-        <button class="btn-gold" onclick="uploadPhoto()">⬆ 업로드</button>
-      </div>
-      <label class="gallery-link">
-        또는 <span>갤러리에서 선택</span>
-        <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadFromFile(this)">
-      </label>
+      <div class="cam-row" id="actShoot"><button class="btn-gold" onclick="document.getElementById('camInput').click()" style="width:100%">📸 카메라로 촬영</button></div>
+      <div class="cam-row" id="actConfirm" style="display:none"><button class="btn-ghost" onclick="retake()">🔄 다시 찍기</button><button class="btn-gold" onclick="uploadPhoto()">⬆ 업로드</button></div>
+      <label class="gallery-link">또는 <span>갤러리에서 선택</span><input type="file" id="fileInput" accept="image/*" style="display:none" onchange="loadFromFile(this)"></label><input type="file" id="camInput" accept="image/*" capture="environment" style="display:none" onchange="loadFromFile(this)">
     </div>
   </div>
 </div>
 
-<!-- 커스텀 Confirm 다이얼로그 모달 -->
-<div class="modal-bg" id="customConfirmModal" style="display:none; z-index:9999;">
-  <div class="modal" style="max-width:340px; text-align:center; padding:24px; border-radius:18px;">
-    <div style="font-size:32px; margin-bottom:12px;">💡</div>
-    <div id="confirmMessage" style="margin-bottom:24px; font-size:14px; color:var(--text); line-height:1.6; font-weight:500;"></div>
-    <div style="display:flex; gap:10px;">
-      <button class="btn-ghost" id="confirmCancelBtn" style="padding:10px; font-size:13px;">취소</button>
-      <button class="btn-gold" id="confirmOkBtn" style="padding:10px; font-size:13px;">확인</button>
-    </div>
-  </div>
-</div>
-
-<!-- 커스텀 Alert 다이얼로그 모달 -->
-<div class="modal-bg" id="customAlertModal" style="display:none; z-index:9999;">
-  <div class="modal" style="max-width:340px; text-align:center; padding:24px; border-radius:18px;">
-    <div id="alertIcon" style="font-size:32px; margin-bottom:12px;">📢</div>
-    <div id="alertMessage" style="margin-bottom:24px; font-size:14px; color:var(--text); line-height:1.6; font-weight:500;"></div>
-    <button class="btn-gold" id="alertOkBtn" style="padding:10px; width:100%; font-size:13px;">확인</button>
-  </div>
-</div>
+<div class="modal-bg" id="customAlertModal" style="z-index:9999;"><div class="modal" style="max-width:340px; text-align:center;"><div id="alertIcon" style="font-size:32px; margin-bottom:12px;">📢</div><div id="alertMessage" style="margin-bottom:24px; font-size:14px; color:var(--text);"></div><button class="btn-gold" id="alertOkBtn">확인</button></div></div>
+<div class="modal-bg" id="customConfirmModal" style="z-index:9999;"><div class="modal" style="max-width:340px; text-align:center;"><div style="font-size:32px; margin-bottom:12px;">💡</div><div id="confirmMessage" style="margin-bottom:24px; font-size:14px; color:var(--text);"></div><div style="display:flex; gap:10px;"><button class="btn-ghost" id="confirmCancelBtn">취소</button><button class="btn-gold" id="confirmOkBtn">확인</button></div></div></div>
 
 <script>
-// ── 서버사이드 주입 Canonical URL ──
 const SCRIPT_URL = "<?= scriptUrl ?>";
+function navigateTo(url) { try { if (window.top && window.top !== window) window.top.location.href = url; else window.location.href = url; } catch(e) { window.location.href = url; } }
+function hasValidImage(url) { if (!url) return false; const u = String(url).trim().toLowerCase(); return u !== '' && u !== 'null' && u !== 'undefined' && u !== 'none'; }
+function showAlert(msg) { document.getElementById('customAlertModal').classList.add('open'); document.getElementById('alertMessage').textContent = msg; document.getElementById('alertOkBtn').onclick = () => document.getElementById('customAlertModal').classList.remove('open'); }
+function showConfirm(msg, onOk) { document.getElementById('customConfirmModal').classList.add('open'); document.getElementById('confirmMessage').textContent = msg; document.getElementById('confirmOkBtn').onclick = () => { document.getElementById('customConfirmModal').classList.remove('open'); onOk(); }; document.getElementById('confirmCancelBtn').onclick = () => document.getElementById('customConfirmModal').classList.remove('open'); }
 
-// ── iframe 샌드박스 완벽 우회용 최상위 프레임 내비게이터 ──────────────────────
-function navigateTo(url) {
-  try {
-    if (window.top && window.top !== window) {
-      window.top.location.href = url;
-    } else {
-      window.location.href = url;
-    }
-  } catch (e) {
-    window.location.href = url;
-  }
+google.script.run.withSuccessHandler(u => { if (u && u.role === 'admin') document.getElementById('adminMenu').style.display = 'flex'; }).getCurrentUser();
+function goAdmin() { navigateTo(SCRIPT_URL + '?page=admin'); }
+function switchToMobile() { try { localStorage.setItem("cv_manual_view", "mobile"); localStorage.setItem("cv_last_view", "mobile"); } catch(e){} navigateTo(SCRIPT_URL + '?v=mobile'); }
+
+function autoHyphen(target) { target.value = target.value.replace(/[^0-9]/g, '').replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, `$1-$2-$3`).replace(/(\-{1,2})$/g, ""); }
+
+let ALL_CARDS = [], currentFilter = 'all', currentChosung = 'all', lastUpdated = '', searchTimeout = null;
+let chart1 = null, chart2 = null;
+
+// ── 한글 초성 추출 알고리즘 ──
+function getChosung(str) {
+  if (!str) return '';
+  const charCode = str.charCodeAt(0) - 44032;
+  if (charCode < 0 || charCode > 11171) return 'etc'; 
+  const cho = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  const res = cho[Math.floor(charCode / 588)];
+  const normalize = {'ㄲ':'ㄱ','ㄸ':'ㄷ','ㅃ':'ㅂ','ㅆ':'ㅅ','ㅉ':'ㅈ'};
+  return normalize[res] || res;
 }
-
-// ── 이미지 유효성 검증 함수 ──
-function hasValidImage(url) {
-  if (!url) return false;
-  const u = String(url).trim().toLowerCase();
-  return u !== '' && u !== 'null' && u !== 'undefined' && u !== 'none';
-}
-
-// ── iframe 전용 알림 인터페이스 정의 ───────────────────────
-function showConfirm(msg, onOk) {
-  const modal = document.getElementById('customConfirmModal');
-  document.getElementById('confirmMessage').textContent = msg;
-  modal.style.display = 'flex';
-  
-  const okBtn = document.getElementById('confirmOkBtn');
-  const cancelBtn = document.getElementById('confirmCancelBtn');
-  
-  const cleanup = () => {
-    modal.style.display = 'none';
-    okBtn.onclick = null;
-    cancelBtn.onclick = null;
-  };
-  
-  okBtn.onclick = () => { cleanup(); onOk(); };
-  cancelBtn.onclick = () => { cleanup(); };
-}
-
-function showAlert(msg, isSuccess = false) {
-  const modal = document.getElementById('customAlertModal');
-  document.getElementById('alertIcon').textContent = isSuccess ? '✅' : '⚠️';
-  document.getElementById('alertMessage').textContent = msg;
-  modal.style.display = 'flex';
-  
-  document.getElementById('alertOkBtn').onclick = () => {
-    modal.style.display = 'none';
-  };
-}
-
-// ── 세션 바인딩 ───────────────────────────────────────────
-google.script.run
-  .withSuccessHandler(function(user) {
-    if (user.role === 'admin') {
-      document.getElementById('adminMenu').style.display = 'flex';
-    }
-  })
-  .withFailureHandler(function(){})
-  .getCurrentUser();
-
-function goAdmin() {
-  navigateTo(SCRIPT_URL + '?page=admin');
-}
-
-function switchToMobile() {
-  try { 
-    localStorage.setItem("cv_manual_view", "mobile"); 
-    localStorage.setItem("cv_last_view", "mobile");
-  } catch(e){}
-  navigateTo(SCRIPT_URL + '?v=mobile');
-}
-
-let ALL_CARDS = [], currentFilter = 'all', lastUpdated = '', pollTimer = null;
 
 window.addEventListener('load', () => {
-  try {
-    localStorage.setItem("cv_last_view", "desktop"); // [해결] 데스크탑 모드에서 "desktop" 상태 주입
-  } catch(e) {}
+  try { localStorage.setItem("cv_last_view", "desktop"); } catch(e) {}
+  showSkeleton();
   loadCards();
-  startPolling();
+  setInterval(() => {
+    google.script.run.withSuccessHandler(ts => {
+      if (ts && ts !== lastUpdated) { lastUpdated = ts; flashSync(); loadCards(); }
+    }).getLastUpdated();
+  }, 30000);
 });
 
-function startPolling() {
-  pollTimer = setInterval(() => {
-    google.script.run
-      .withSuccessHandler(ts => {
-        if (ts && ts !== lastUpdated) {
-          lastUpdated = ts;
-          flashSync();
-          loadCards();
-        }
-      }).getLastUpdated();
-  }, 30000);
-}
+function flashSync() { const d = document.getElementById('syncDot'); d.classList.add('active'); setTimeout(() => d.classList.remove('active'), 2000); }
 
-function flashSync() {
-  const dot = document.getElementById('syncDot');
-  dot.classList.add('active');
-  setTimeout(() => dot.classList.remove('active'), 2000);
+function showSkeleton() {
+  const skelHtml = Array(8).fill().map(()=>`<div class="skeleton"><div class="sk-img"></div><div class="sk-body"><div class="sk-line medium"></div><div class="sk-line short"></div><div style="margin-top:15px"><div class="sk-line"></div></div></div></div>`).join('');
+  document.getElementById('app').innerHTML = `<div class="grid">${skelHtml}</div>`;
 }
 
 function loadCards() {
-  google.script.run.withSuccessHandler(render)
-    .withFailureHandler(err => {
-      document.getElementById('app').innerHTML =
-        `<div class="loading-wrap" style="color:#e05555">❌ ${err.message}</div>`;
-    }).getNamecards();
+  google.script.run.withSuccessHandler(render).withFailureHandler(e=>{ document.getElementById('app').innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);font-size:14px;">목록을 불러오지 못했습니다.<br>새로고침해 주세요.</div>'; showAlert('목록 갱신 실패: ' + e.message); }).getNamecards();
 }
 
 function render(cards) {
   ALL_CARDS = cards;
-  lastUpdated = cards.length ? (cards[cards.length-1].createdAt || '') : lastUpdated;
+  lastUpdated = cards.length ? (cards[0].createdAt || '') : lastUpdated; 
   document.getElementById('totalCount').textContent = cards.length;
-  filterCards(currentFilter, null);
+  filterByChosung(currentChosung, null); // Re-apply existing filters
 }
 
-function renderGrid(cards) {
-  const app = document.getElementById('app');
-  document.getElementById('sectionSub').textContent = `${cards.length}개의 명함`;
-  if (!cards.length) {
-    app.innerHTML = `
-      <div class="empty">
-        <div class="empty-icon-wrap">🪪</div>
-        <div class="empty-title">명함이 없습니다</div>
-        <div class="empty-sub">📷 버튼을 눌러<br>첫 번째 명함을 추가하세요</div>
-      </div>`;
-    return;
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => filterCards(currentFilter, null), 300);
+});
+
+function filterByChosung(cho, el) {
+  currentChosung = cho;
+  if(el) {
+    document.querySelectorAll('.c-btn').forEach(b => b.classList.remove('on'));
+    el.classList.add('on');
   }
-  app.innerHTML = `<div class="grid">${cards.map(cardHTML).join('')}</div>`;
-}
-
-// 기본 플레이스홀더 배너 HTML 반환 (Desktop 용)
-function makeDefaultBannerHTML() {
-  return `
-    <div class="card-banner-default">
-      <div class="default-corner tl"></div>
-      <div class="default-corner tr"></div>
-      <div class="default-corner bl"></div>
-      <div class="default-corner br"></div>
-      <div class="default-inner">
-        <div class="default-monogram">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-        </div>
-        <div class="default-lines">
-          <div class="default-line"></div>
-          <div class="default-line"></div>
-          <div class="default-line"></div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function cardHTML(c) {
-  const hasImg = hasValidImage(c.imageUrl);
-  const imgTag = hasImg ? `<img src="${c.imageUrl}" onerror="this.parentElement.innerHTML=makeDefaultBannerHTML()">` : '';
-  const mediaContainer = hasImg ? `<div class="card-img">${imgTag}</div>` : makeDefaultBannerHTML();
-
-  return `
-  <div class="card" onclick="openDetail(${c.index})">
-    ${mediaContainer}
-    <div class="card-menu">
-      <button class="card-btn card-btn-edit" onclick="event.stopPropagation();openEdit(${c.index})">✏️</button>
-      <button class="card-btn card-btn-del"  onclick="event.stopPropagation();delCard(${c.index},'${escHtml(c.name)}')">🗑️</button>
-    </div>
-    <div class="card-body">
-      <div class="card-name">${escHtml(c.name||'이름 없음')}</div>
-      <div class="card-company">${escHtml(c.company||'')}</div>
-      <div class="card-title">${escHtml(c.title||'')}</div>
-      <div class="card-contacts">
-        ${c.phone  ? `<a class="card-contact" href="tel:${c.phone}"  onclick="event.stopPropagation()">📞 ${escHtml(c.phone)}</a>`:''}
-        ${c.mobile ? `<a class="card-contact" href="tel:${c.mobile}" onclick="event.stopPropagation()">📱 ${escHtml(c.mobile)}</a>`:''}
-        ${c.email  ? `<a class="card-contact" href="mailto:${c.email}" onclick="event.stopPropagation()">✉️ ${escHtml(c.email)}</a>`:''}
-      </div>
-    </div>
-  </div>`;
+  filterCards(currentFilter, null);
 }
 
 function filterCards(type, el) {
   currentFilter = type;
   let cards = ALL_CARDS;
+  
+  // Date filter
   if (type === 'recent') {
-    const cutoff = Date.now() - 7*24*60*60*1000;
-    cards = cards.filter(c => new Date(c.createdAt).getTime() > cutoff);
+    const cut = Date.now() - 7*24*60*60*1000;
+    cards = cards.filter(c => new Date(c.createdAt).getTime() > cut);
   }
+  
+  // Chosung Filter
+  if (currentChosung !== 'all') {
+    cards = cards.filter(c => {
+      if (!c.name) return currentChosung === 'etc';
+      const initial = getChosung(c.name);
+      if (currentChosung === 'etc') return initial === 'etc';
+      return initial === currentChosung;
+    });
+  }
+
+  // Text Search Filter
   const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (q) cards = cards.filter(c =>
-    [c.name,c.company,c.title,c.phone,c.mobile,c.email].some(v => v&&v.toLowerCase().includes(q))
-  );
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-  if (el?.classList?.contains('nav-item')) el.classList.add('active');
-  document.getElementById('sectionTitle').textContent = type==='recent' ? '최근 7일' : '전체 명함';
-  renderGrid(cards);
+  if (q) cards = cards.filter(c => [c.name,c.company,c.title,c.phone,c.mobile,c.email].some(v => v&&v.toLowerCase().includes(q)));
+  
+  if (el) { document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active')); el.classList.add('active'); }
+  document.getElementById('sectionTitle').textContent = type==='recent' ? '최근 7일' : (currentChosung !== 'all' ? `'${currentChosung}' 필터링` : '전체 명함');
+  document.getElementById('sectionSub').textContent = `${cards.length}개의 명함`;
+  
+  const app = document.getElementById('app');
+  if (!cards.length) { app.innerHTML = `<div class="empty"><div class="empty-icon-wrap">🪪</div><div class="empty-title">조건에 맞는 명함이 없습니다</div></div>`; return; }
+  app.innerHTML = `<div class="grid">${cards.map(cardHTML).join('')}</div>`;
 }
 
-document.getElementById('searchInput').addEventListener('input', function() { filterCards(currentFilter, null); });
+function makeDefaultBannerHTML() {
+  return `<div class="card-banner-default"><div class="default-corner tl"></div><div class="default-corner tr"></div><div class="default-corner bl"></div><div class="default-corner br"></div><div class="default-inner"><div class="default-monogram"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div class="default-lines"><div class="default-line"></div><div class="default-line"></div><div class="default-line"></div></div></div></div>`;
+}
+
+function cardHTML(c) {
+  const hasImg = hasValidImage(c.imageUrl);
+  const imgTag = ''; // 목록은 기본 배너만 (공개 URL 제거)
+  const mediaContainer = hasImg ? `<div class="card-img">${imgTag}</div>` : makeDefaultBannerHTML();
+  
+  let badgeHtml = '';
+  if (c.status === 'NEW') badgeHtml = '<div class="status-badge badge-new">NEW</div>';
+  else if (c.status === 'CAREER_CHANGED') badgeHtml = '<div class="status-badge badge-change">CAREER UPDATED</div>';
+  else if (c.status === 'UPDATED') badgeHtml = '<div class="status-badge badge-update">UPDATED</div>';
+
+  return `
+  <div class="card" onclick="openDetail(${c.index})">
+    ${badgeHtml}
+    ${mediaContainer}
+    <div class="card-menu"><button class="card-btn card-btn-edit" onclick="event.stopPropagation();openEdit(${c.index})">✏️</button><button class="card-btn card-btn-del" onclick="event.stopPropagation();delCard(${c.index})">🗑️</button></div>
+    <div class="card-body">
+      <div class="card-name">${escHtml(c.name||'이름 없음')}</div>
+      <div class="card-company">${escHtml(c.company||'')}</div>
+      <div class="card-title">${escHtml(c.title||'')}</div>
+      <div class="card-contacts">
+        ${c.mobile ? `<div class="card-contact">📱 ${escHtml(c.mobile)}</div>`:''}
+        ${c.phone ? `<div class="card-contact">📞 ${escHtml(c.phone)}</div>`:''}
+        ${c.email  ? `<div class="card-contact">✉️ ${escHtml(c.email)}</div>`:''}
+      </div>
+    </div>
+  </div>`;
+}
 
 function openDetail(idx) {
   const c = ALL_CARDS.find(x => x.index === idx); if (!c) return;
   const hasImg = hasValidImage(c.imageUrl);
-  const imgTag = hasImg ? `<img src="${c.imageUrl}" onerror="this.parentElement.innerHTML=makeDefaultBannerHTML()">` : '';
-  const mediaContainer = hasImg ? `<div class="detail-img">${imgTag}</div>` : makeDefaultBannerHTML();
+  const mediaContainer = hasImg ? `<div class="detail-img" id="detImgBox">${makeDefaultBannerHTML()}</div>` : makeDefaultBannerHTML();
+
+  let historyHtml = '';
+  if (c.history && c.history.length > 0) {
+    historyHtml = `
+      <div class="timeline-wrap">
+        <div class="timeline-title">🏢 커리어 이직 이력</div>
+        <div class="timeline">
+          ${c.history.map(h => `
+            <div class="timeline-item">
+              <div class="tl-date">${new Date(h.date).toLocaleDateString('ko-KR')}</div>
+              <div class="tl-company">${escHtml(h.oldCompany)} ➔ <b style="color:var(--gold)">${escHtml(h.newCompany)}</b></div>
+              <div class="tl-title">${escHtml(h.oldTitle)} ➔ ${escHtml(h.newTitle)}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
 
   document.getElementById('detailContent').innerHTML = `
-    <div class="modal-header">
-      <span class="modal-title">${escHtml(c.name||'명함 상세')}</span>
-      <button class="modal-close" onclick="closeModal('detailModal')">×</button>
-    </div>
-    ${mediaContainer}
-    <div class="detail-body">
-      <div class="detail-name">${escHtml(c.name||'이름 없음')}</div>
-      <div class="detail-company">${escHtml(c.company||'')}</div>
+    <div class="modal-header"><span class="modal-title">${escHtml(c.name||'명함')}</span><button class="modal-close" onclick="closeModal('detailModal')">×</button></div>
       <div class="detail-title">${escHtml(c.title||'')}</div>
       <div class="contact-list">
-        ${c.phone   ? `<a class="contact-item" href="tel:${c.phone}"><div class="contact-icon ph">📞</div><div><div class="contact-label">전화</div><div class="contact-value">${escHtml(c.phone)}</div></div></a>`:``}
-        ${c.mobile  ? `<a class="contact-item" href="tel:${c.mobile}"><div class="contact-icon mb">📱</div><div><div class="contact-label">휴대폰</div><div class="contact-value">${escHtml(c.mobile)}</div></div></a>`:``}
-        ${c.email   ? `<a class="contact-item" href="mailto:${c.email}"><div class="contact-icon em">✉️</div><div><div class="contact-label">이메일</div><div class="contact-value">${escHtml(c.email)}</div></div></a>`:``}
+        ${c.phone   ? `<a class="contact-item" href="tel:${escHtml(c.phone)}"><div class="contact-icon ph">📞</div><div><div class="contact-label">일반전화</div><div class="contact-value">${escHtml(c.phone)}</div></div></a>`:``}
+        ${c.mobile  ? `<a class="contact-item" href="tel:${escHtml(c.mobile)}"><div class="contact-icon mb">📱</div><div><div class="contact-label">휴대폰</div><div class="contact-value">${escHtml(c.mobile)}</div></div></a>`:``}
+        ${c.email   ? `<a class="contact-item" href="mailto:${escHtml(c.email)}"><div class="contact-icon em">✉️</div><div><div class="contact-label">이메일</div><div class="contact-value">${escHtml(c.email)}</div></div></a>`:``}
         ${c.address ? `<div class="contact-item"><div class="contact-icon ad">📍</div><div><div class="contact-label">주소</div><div class="contact-value">${escHtml(c.address)}</div></div></div>`:``}
       </div>
+      ${historyHtml}
     </div>`;
   openModal('detailModal');
 }
@@ -642,162 +433,84 @@ function openDetail(idx) {
 function openEdit(idx) {
   const c = ALL_CARDS.find(x => x.index === idx); if (!c) return;
   document.getElementById('editContent').innerHTML = `
-    <div class="modal-header">
-      <span class="modal-title">명함 수정</span>
-      <button class="modal-close" onclick="closeModal('editModal')">×</button>
-    </div>
+    <div class="modal-header"><span class="modal-title">명함 수정</span><button class="modal-close" onclick="closeModal('editModal')">×</button></div>
     <div class="edit-body">
       ${fld('company','회사명',c.company)}
       ${fld('name','이름',c.name)}
       ${fld('title','직책',c.title)}
-      ${fld('phone','전화번호',c.phone)}
-      ${fld('mobile','휴대폰',c.mobile)}
+      <div class="field-group"><label class="field-label">전화번호</label><input class="field-input" id="f_phone" type="text" value="${escHtml(c.phone||'')}" oninput="autoHyphen(this)" maxlength="13"></div>
+      <div class="field-group"><label class="field-label">휴대폰</label><input class="field-input" id="f_mobile" type="text" value="${escHtml(c.mobile||'')}" oninput="autoHyphen(this)" maxlength="13"></div>
       ${fld('email','이메일',c.email)}
       ${fld('address','주소',c.address)}
-      <div class="form-actions">
-        <button class="btn-ghost" onclick="closeModal('editModal')">취소</button>
-        <button class="btn-gold" onclick="saveEdit(${idx})">저장</button>
-      </div>
+      <div class="form-actions"><button class="btn-ghost" onclick="closeModal('editModal')">취소</button><button class="btn-gold" onclick="saveEdit(${idx})">저장</button></div>
     </div>`;
   openModal('editModal');
 }
 
-function fld(id, label, val) {
-  return `<div class="field-group"><label class="field-label">${label}</label><input class="field-input" id="f_${id}" type="text" value="${escHtml(val||'')}"></div>`;
-}
+function fld(id, label, val) { return `<div class="field-group"><label class="field-label">${label}</label><input class="field-input" id="f_${id}" type="text" value="${escHtml(val||'')}"></div>`; }
 
 function saveEdit(idx) {
-  const data = {
-    company: document.getElementById('f_company').value,
-    name:    document.getElementById('f_name').value,
-    title:   document.getElementById('f_title').value,
-    phone:   document.getElementById('f_phone').value,
-    mobile:  document.getElementById('f_mobile').value,
-    email:   document.getElementById('f_email').value,
-    address: document.getElementById('f_address').value,
-  };
-  google.script.run
-    .withSuccessHandler(() => { closeModal('editModal'); loadCards(); })
-    .withFailureHandler(err => showAlert('저장 실패: ' + err.message))
-    .updateNamecard(idx, data);
+  const d = { company: document.getElementById('f_company').value, name: document.getElementById('f_name').value, title: document.getElementById('f_title').value, phone: document.getElementById('f_phone').value, mobile: document.getElementById('f_mobile').value, email: document.getElementById('f_email').value, address: document.getElementById('f_address').value };
+  google.script.run.withSuccessHandler(() => { closeModal('editModal'); showSkeleton(); loadCards(); }).withFailureHandler(err => showAlert('저장 실패: ' + err.message)).updateNamecard(idx, d, (ALL_CARDS.find(c => c.index === idx)||{}).id);
 }
 
-function delCard(idx, name) {
-  showConfirm(`'${name}' 명함을 삭제할까요?`, () => {
-    google.script.run
-      .withSuccessHandler(() => {
-        ALL_CARDS = ALL_CARDS.filter(c => c.index !== idx);
-        document.getElementById('totalCount').textContent = ALL_CARDS.length;
-        filterCards(currentFilter, null);
-        showAlert('명함이 삭제되었습니다.', true);
-      })
-      .withFailureHandler(err => showAlert('삭제 실패: ' + err.message))
-      .deleteNamecard(idx);
+function delCard(idx) { showConfirm("명함을 삭제할까요?", () => { google.script.run.withSuccessHandler(()=>{ showAlert('삭제되었습니다.'); showSkeleton(); loadCards(); }).withFailureHandler(err => { showAlert('삭제 실패: ' + err.message); showSkeleton(); loadCards(); }).deleteNamecard(idx, (ALL_CARDS.find(c => c.index === idx)||{}).id); }); }
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+// ── Chart.js Dashboard ──
+function openStatsModal() {
+  openModal('statsModal');
+  setTimeout(renderCharts, 100); 
+}
+
+function renderCharts() {
+  const lastNameCount = {};
+  const companyCount = {};
+
+  ALL_CARDS.forEach(c => {
+    if (c.name) {
+      const ln = c.name.trim().charAt(0);
+      if (/[가-힣]/.test(ln)) lastNameCount[ln] = (lastNameCount[ln] || 0) + 1;
+    }
+    if (c.company) {
+      const comp = c.company.trim();
+      companyCount[comp] = (companyCount[comp] || 0) + 1;
+    }
+  });
+
+  const sortedNames = Object.entries(lastNameCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const sortedComps = Object.entries(companyCount).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  const colors = ['#c9a84c', '#a68735', '#846924', '#624c16', '#41320b'];
+  const chartOptions = { responsive: true, maintainAspectRatio: false, color: '#9e9a92', plugins: { legend: { labels: { color: '#9e9a92' } } } };
+
+  if(chart1) chart1.destroy();
+  chart1 = new Chart(document.getElementById('lastNameChart'), {
+    type: 'doughnut',
+    data: { labels: sortedNames.map(x=>x[0]+'씨'), datasets: [{ data: sortedNames.map(x=>x[1]), backgroundColor: colors, borderColor: '#111116', borderWidth: 2 }] },
+    options: { ...chartOptions, cutout: '60%' }
+  });
+
+  if(chart2) chart2.destroy();
+  chart2 = new Chart(document.getElementById('companyChart'), {
+    type: 'bar',
+    data: { labels: sortedComps.map(x=>x[0]), datasets: [{ label: '등록 수', data: sortedComps.map(x=>x[1]), backgroundColor: '#c9a84c', borderRadius: 4 }] },
+    options: { ...chartOptions, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { stepSize: 1 } }, x: { grid: { display: false } } } }
   });
 }
 
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-bg').forEach(bg => {
-  bg.addEventListener('click', e => { if (e.target === bg) bg.classList.remove('open'); });
-});
-
+// Camera Logic Snippets
 let stream=null, facingMode='environment', capturedB64=null, capturedMime='image/jpeg';
-
-async function openUpload() {
-  openModal('uploadModal');
-  document.getElementById('camWrap').style.display     = 'block';
-  document.getElementById('camPerm').style.display     = 'none';
-  document.getElementById('previewWrap').style.display = 'none';
-  document.getElementById('actShoot').style.display    = 'flex';
-  document.getElementById('actConfirm').style.display  = 'none';
-  document.getElementById('progressTrack').style.display = 'none';
-  document.getElementById('uploadMsg').textContent     = '';
-  capturedB64 = null;
-  await startCam();
-}
-
-async function startCam() {
-  stopCam();
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode, width:{ideal:1920}, height:{ideal:1080} } });
-    document.getElementById('camVideo').srcObject = stream;
-    document.getElementById('camWrap').style.display = 'block';
-    document.getElementById('camPerm').style.display = 'none';
-  } catch(e) {
-    if (e.name==='NotAllowedError'||e.name==='PermissionDeniedError') showPermGuide();
-    else setMsg('❌ 카메라 오류: ' + e.message);
-  }
-}
-
-function showPermGuide() {
-  document.getElementById('camWrap').style.display = 'none';
-  document.getElementById('camPerm').style.display = 'flex';
-  document.getElementById('permGuide').innerHTML = `💻 주소창 🔒 → 사이트 설정 → 카메라 → <b style="color:#c9a84c">허용</b>`;
-}
-
-async function retryCamera() {
-  document.getElementById('camPerm').style.display = 'none';
-  document.getElementById('camWrap').style.display = 'block';
-  await startCam();
-}
-
-async function switchCamera() { facingMode = facingMode==='environment'?'user':'environment'; await startCam(); }
-
-function shoot() {
-  const v=document.getElementById('camVideo'), c=document.getElementById('camCanvas');
-  c.width=v.videoWidth; c.height=v.videoHeight;
-  c.getContext('2d').drawImage(v,0,0);
-  capturedB64=c.toDataURL('image/jpeg',0.92).split(',')[1]; capturedMime='image/jpeg';
-  document.getElementById('previewImg').src='data:image/jpeg;base64,'+capturedB64;
-  document.getElementById('camWrap').style.display     = 'none';
-  document.getElementById('previewWrap').style.display = 'block';
-  document.getElementById('actShoot').style.display    = 'none';
-  document.getElementById('actConfirm').style.display  = 'flex';
-  stopCam();
-}
-
-function retake() {
-  document.getElementById('camWrap').style.display     = 'block';
-  document.getElementById('previewWrap').style.display = 'none';
-  document.getElementById('actShoot').style.display    = 'flex';
-  document.getElementById('actConfirm').style.display  = 'none';
-  capturedB64=null; startCam();
-}
-
-function loadFromFile(input) {
-  const file=input.files[0]; if (!file) return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const url=e.target.result;
-    capturedB64=url.split(',')[1]; capturedMime=file.type;
-    document.getElementById('previewImg').src=url;
-    document.getElementById('camWrap').style.display     = 'none';
-    document.getElementById('previewWrap').style.display = 'block';
-    document.getElementById('actShoot').style.display    = 'none';
-    document.getElementById('actConfirm').style.display  = 'flex';
-    stopCam();
-  };
-  reader.readAsDataURL(file);
-}
-
-function uploadPhoto() {
-  if (!capturedB64) return;
-  const fileName=`namecard_${Date.now()}.jpg`;
-  document.getElementById('actConfirm').style.display    = 'none';
-  document.getElementById('progressTrack').style.display = 'block';
-  setProgress(20); setMsg('드라이브에 업로드 중...');
-  google.script.run
-    .withSuccessHandler(()=>{ setProgress(100); setMsg('✅ 업로드 완료!'); setTimeout(()=>{ closeUpload(); loadCards(); }, 2000); })
-    .withFailureHandler(err=>{ setProgress(0); setMsg('❌ 업로드 실패: '+err.message); document.getElementById('actConfirm').style.display='flex'; })
-    .uploadToDrive(capturedB64, capturedMime, fileName);
-}
-
+async function openUpload() { openModal('uploadModal'); document.getElementById('camWrap').style.display='block'; document.getElementById('camPerm').style.display='none'; document.getElementById('previewWrap').style.display='none'; document.getElementById('actShoot').style.display='flex'; document.getElementById('actConfirm').style.display='none'; document.getElementById('progressTrack').style.display='none'; document.getElementById('uploadMsg').textContent=''; capturedB64=null; await startCam(); }
+async function startCam() { document.getElementById('camWrap').style.display='none'; document.getElementById('camPerm').style.display='none'; }
+async function retryCamera() { document.getElementById('camPerm').style.display='none'; document.getElementById('camWrap').style.display='block'; await startCam(); }
+function retake() { document.getElementById('camWrap').style.display='block'; document.getElementById('previewWrap').style.display='none'; document.getElementById('actShoot').style.display='flex'; document.getElementById('actConfirm').style.display='none'; capturedB64=null; startCam(); }
+function loadFromFile(input) { const file=input.files[0]; if(!file)return; const reader=new FileReader(); reader.onload=e=>{ const url=e.target.result; var im=new Image(); im.onload=function(){ var mx=3000, w=im.width, h=im.height; if(w>mx||h>mx){ var r=Math.min(mx/w,mx/h); w=Math.round(w*r); h=Math.round(h*r); } var cv=document.createElement('canvas'); cv.width=w; cv.height=h; cv.getContext('2d').drawImage(im,0,0,w,h); capturedB64=cv.toDataURL('image/jpeg',0.92).split(',')[1]; capturedMime='image/jpeg'; document.getElementById('previewImg').src='data:image/jpeg;base64,'+capturedB64; document.getElementById('camWrap').style.display='none'; document.getElementById('previewWrap').style.display='block'; document.getElementById('actShoot').style.display='none'; document.getElementById('actConfirm').style.display='flex'; }; im.src=url; }; reader.readAsDataURL(file); input.value = ''; }
+function uploadPhoto() { if(!capturedB64)return; const fileName=`namecard_${Date.now()}.jpg`; document.getElementById('actConfirm').style.display='none'; document.getElementById('progressTrack').style.display='block'; document.getElementById('progressBar').style.width='20%'; document.getElementById('uploadMsg').textContent='드라이브 업로드 중...'; google.script.run.withSuccessHandler(()=>{ document.getElementById('progressBar').style.width='100%'; document.getElementById('uploadMsg').textContent='✅ 업로드 완료!'; setTimeout(()=>{ closeUpload(); showSkeleton(); loadCards(); }, 2000); }).withFailureHandler(err=>{ document.getElementById('progressBar').style.width='0%'; document.getElementById('uploadMsg').textContent='❌ 실패: '+err.message; document.getElementById('actConfirm').style.display='flex'; }).uploadToDrive(capturedB64, capturedMime, fileName); }
 function closeUpload() { stopCam(); closeModal('uploadModal'); }
 function stopCam() { if (stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; } }
-function setProgress(p) { document.getElementById('progressBar').style.width=p+'%'; }
-function setMsg(m)       { document.getElementById('uploadMsg').textContent=m; }
-function escHtml(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 </script>
 </body>
 </html>

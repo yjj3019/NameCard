@@ -375,7 +375,7 @@ function renderUsers(users) {
       </div>
       <div class="user-date">${formatDate(u.createdAt)}</div>
       <div class="row-actions">
-        <button class="btn-role" onclick="toggleRole(${u.index},'${u.role}')">
+        <button class="btn-role" onclick="toggleRole(${u.index},'${escHtml(u.role)}','${escHtml(u.email)}')">
           ${u.role === 'admin' ? '→ 일반' : '→ 관리자'}
         </button>
         <button class="btn-del" onclick="removeUser(${u.index},'${escHtml(u.email)}')">삭제</button>
@@ -404,13 +404,13 @@ function addUser() {
     .addUser(email, name, role);
 }
 
-function toggleRole(rowIndex, currentRole) {
+function toggleRole(rowIndex, currentRole, email) {
   const newRole = currentRole === 'admin' ? 'user' : 'admin';
   showConfirm(`역할을 "${newRole === 'admin' ? '관리자' : '일반 사용자'}"로 변경할까요?`, () => {
     google.script.run
       .withSuccessHandler(() => { showToast('✅ 역할이 변경되었습니다', 'ok'); loadUsers(); })
       .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
-      .updateUserRole(rowIndex, newRole);
+      .updateUserRole(rowIndex, newRole, email);
   });
 }
 
@@ -419,7 +419,7 @@ function removeUser(rowIndex, email) {
     google.script.run
       .withSuccessHandler(() => { showToast('✅ 삭제되었습니다', 'ok'); loadUsers(); })
       .withFailureHandler(err => showToast('❌ ' + err.message, 'err'))
-      .removeUser(rowIndex);
+      .removeUser(rowIndex, email);
   });
 }
 
@@ -496,6 +496,32 @@ function formatDate(ts) {
   try { return new Date(ts).toLocaleDateString('ko-KR'); } catch { return ts; }
 }
 
+function showConfirm(msg, onOk) {
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.62);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px;';
+  var box = document.createElement('div');
+  box.style.cssText = 'background:#17171e;border:1px solid rgba(255,255,255,.09);border-radius:14px;padding:24px;max-width:340px;width:100%;color:#f0ede8;font-size:14px;line-height:1.6;font-family:inherit;';
+  var p = document.createElement('div');
+  p.textContent = msg;
+  p.style.cssText = 'margin-bottom:20px;';
+  var row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+  var cancel = document.createElement('button');
+  cancel.textContent = '취소';
+  cancel.style.cssText = 'padding:9px 18px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:transparent;color:#9e9a92;cursor:pointer;font-family:inherit;font-size:13px;';
+  var ok = document.createElement('button');
+  ok.textContent = '확인';
+  ok.style.cssText = 'padding:9px 18px;border-radius:8px;border:none;background:#c9a84c;color:#111116;font-weight:600;cursor:pointer;font-family:inherit;font-size:13px;';
+  function close() { if (ov.parentNode) ov.parentNode.removeChild(ov); }
+  cancel.onclick = close;
+  ok.onclick = function() { close(); onOk(); };
+  ov.onclick = function(e) { if (e.target === ov) close(); };
+  row.appendChild(cancel); row.appendChild(ok);
+  box.appendChild(p); box.appendChild(row);
+  ov.appendChild(box);
+  document.body.appendChild(ov);
+}
+
 function showToast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -504,7 +530,7 @@ function showToast(msg, type) {
 }
 
 function escHtml(s) {
-  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 </script>
 </body>
